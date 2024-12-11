@@ -68,7 +68,7 @@ export default function Members() {
       <CoveredMembersOverview members={members} />
 
       <Card className="mb-4">
-        <CardContent className="pt-6">
+        <CardContent>
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button 
