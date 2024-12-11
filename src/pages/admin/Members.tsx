@@ -9,7 +9,7 @@ import {
   TrashIcon,
   Eye,
   Users,
-  Pencil, // We'll use Pencil instead of Edit2 as it's the current icon name in lucide
+  Pencil,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CoveredMembersOverview } from "@/components/members/CoveredMembersOverview";
@@ -19,6 +19,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 const members = [
@@ -95,29 +97,38 @@ export default function Members() {
                         <span>Family Members</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56 p-2">
+                    <DropdownMenuContent className="w-56">
+                      <DropdownMenuLabel>Covered Members</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
                       {member.coveredMembers?.spouses?.length > 0 && (
-                        <div className="p-2">
-                          <h4 className="font-semibold mb-2">Spouse</h4>
+                        <>
+                          <div className="px-2 py-1.5 text-sm font-semibold">Spouse</div>
                           {member.coveredMembers.spouses.map((spouse, index) => (
-                            <div key={index} className="text-sm py-1">
-                              {spouse.name} ({spouse.dateOfBirth})
+                            <div key={index} className="px-2 py-1.5 text-sm">
+                              {spouse.name}
+                              <div className="text-xs text-muted-foreground">
+                                Born: {spouse.dateOfBirth}
+                              </div>
                             </div>
                           ))}
-                        </div>
+                          <DropdownMenuSeparator />
+                        </>
                       )}
                       {member.coveredMembers?.dependants?.length > 0 && (
-                        <div className="p-2">
-                          <h4 className="font-semibold mb-2">Dependants</h4>
+                        <>
+                          <div className="px-2 py-1.5 text-sm font-semibold">Dependants</div>
                           {member.coveredMembers.dependants.map((dependant, index) => (
-                            <div key={index} className="text-sm py-1">
-                              {dependant.name} ({dependant.relationship})
+                            <div key={index} className="px-2 py-1.5 text-sm">
+                              {dependant.name}
+                              <div className="text-xs text-muted-foreground">
+                                {dependant.relationship} | Born: {dependant.dateOfBirth}
+                              </div>
                             </div>
                           ))}
-                        </div>
+                        </>
                       )}
                       {(!member.coveredMembers?.spouses?.length && !member.coveredMembers?.dependants?.length) && (
-                        <div className="p-2 text-sm text-muted-foreground">
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
                           No family members registered
                         </div>
                       )}
