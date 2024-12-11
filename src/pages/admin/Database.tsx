@@ -13,30 +13,39 @@ export default function Database() {
 
     try {
       const text = await file.text();
+      console.log('Original text:', text);
       
-      // More aggressive JSON string cleaning
+      // Step 1: Remove comments and whitespace
       let cleanedText = text
-        // Remove comments
         .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '')
-        // Remove trailing commas
-        .replace(/,(\s*[}\]])/g, '$1')
-        // Quote all unquoted keys (more comprehensive)
-        .replace(/({|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-        // Convert single quotes to double quotes
-        .replace(/'([^']*)'/g, '"$1"')
-        // Remove whitespace between values
         .replace(/\s+/g, ' ')
-        // Remove empty lines and trim
         .trim();
+      
+      console.log('After removing comments:', cleanedText);
 
-      // Additional cleanup for common JSON issues
+      // Step 2: Fix property names (more comprehensive)
       cleanedText = cleanedText
+        // Quote unquoted keys
+        .replace(/({|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+        // Handle nested objects and arrays
+        .replace(/:\s*{([^}]*)}/g, function(match, contents) {
+          return ': {' + contents.replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '"$1":') + '}';
+        });
+      
+      console.log('After fixing property names:', cleanedText);
+
+      // Step 3: Fix common JSON syntax issues
+      cleanedText = cleanedText
+        // Fix trailing commas
+        .replace(/,(\s*[}\]])/g, '$1')
         // Fix multiple consecutive commas
         .replace(/,\s*,/g, ',')
-        // Remove commas before closing brackets
-        .replace(/,\s*([\]}])/g, '$1')
-        // Ensure proper array/object closure
-        .replace(/([{\[])\s*,/g, '$1');
+        // Convert single quotes to double quotes
+        .replace(/'([^']*)'/g, '"$1"')
+        // Remove empty lines
+        .replace(/^\s*[\r\n]/gm, '');
+      
+      console.log('Final cleaned JSON:', cleanedText);
 
       let jsonData;
       try {
@@ -51,25 +60,15 @@ export default function Database() {
         
         if (positionMatch) {
           const position = parseInt(positionMatch[1]);
-          const start = Math.max(0, position - 50);
-          const end = Math.min(cleanedText.length, position + 50);
+          const start = Math.max(0, position - 100);
+          const end = Math.min(cleanedText.length, position + 100);
           
-          errorContext = cleanedText.slice(start, end)
-            .split('\n')
-            .map((line, i) => {
-              if (line.length > 100) {
-                return line.slice(0, 50) + '...' + line.slice(-50);
-              }
-              return line;
-            })
-            .join('\n');
-            
-          errorContext = `\n...${errorContext}...\n[Error near position ${position}]`;
+          errorContext = `\nError context:\n${cleanedText.slice(start, end)}\n${'~'.repeat(100)}\nError at position ${position}`;
         }
 
         toast({
           title: "Invalid JSON Format",
-          description: `Please check your JSON formatting. ${errorMessage}${errorContext}\n\nCommon issues include:\n- Missing quotes around property names\n- Trailing commas\n- Unmatched brackets\n- Invalid values`,
+          description: `Please check your JSON formatting. ${errorMessage}${errorContext}\n\nCommon issues:\n- Missing quotes around property names\n- Trailing commas\n- Unmatched brackets\n- Invalid values`,
           variant: "destructive",
         });
         return;
@@ -78,6 +77,24 @@ export default function Database() {
       // Ensure the data is an array
       if (!Array.isArray(jsonData)) {
         jsonData = [jsonData];
+      }
+
+      // Validate required fields
+      const validData = jsonData.every((item: any) => {
+        return (
+          item.name || 
+          item.fullName || 
+          item.collector
+        );
+      });
+
+      if (!validData) {
+        toast({
+          title: "Invalid Data Format",
+          description: "Each member record must contain at least a name/fullName and collector.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const transformedData = transformMemberData(jsonData);
