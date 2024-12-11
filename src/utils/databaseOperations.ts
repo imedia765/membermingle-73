@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 
 export async function insertMemberData(transformedData: any[]) {
   console.log('Starting batch insert of member data');
@@ -9,7 +8,7 @@ export async function insertMemberData(transformedData: any[]) {
       // First, ensure collector exists
       const { data: collector, error: collectorError } = await supabase
         .from('collectors')
-        .select('id')
+        .select('id, prefix, number')
         .eq('name', member.collector)
         .single();
 
@@ -18,22 +17,26 @@ export async function insertMemberData(transformedData: any[]) {
         throw new Error(`Collector not found: ${member.collector}`);
       }
 
-      // Insert member
+      console.log('Found collector:', collector);
+
+      // The trigger will generate the member_number automatically
+      // We just need to ensure we're passing the correct collector_id
       const { data: memberData, error: memberError } = await supabase
         .from('members')
         .insert({
           collector_id: collector.id,
           full_name: member.fullName || member.name,
-          date_of_birth: member.dateOfBirth,
-          gender: member.gender,
-          marital_status: member.maritalStatus,
-          email: member.email,
-          phone: member.mobileNo,
-          address: member.address,
-          postcode: member.postCode,
-          town: member.town,
+          date_of_birth: member.dateOfBirth || null,
+          gender: member.gender || null,
+          marital_status: member.maritalStatus || null,
+          email: member.email || null,
+          phone: member.mobileNo || null,
+          address: member.address || null,
+          postcode: member.postCode || null,
+          town: member.town || null,
           status: 'active',
-          verified: member.verified || false
+          verified: member.verified || false,
+          member_number: '' // This will be overwritten by the trigger
         })
         .select()
         .single();
@@ -42,6 +45,8 @@ export async function insertMemberData(transformedData: any[]) {
         console.error('Error inserting member:', memberError);
         throw memberError;
       }
+
+      console.log('Successfully inserted member:', memberData);
 
       // Insert family members if any
       if (member.dependants?.length) {
@@ -52,8 +57,8 @@ export async function insertMemberData(transformedData: any[]) {
               member_id: memberData.id,
               name: dep.name,
               relationship: dep.relationship,
-              date_of_birth: dep.dateOfBirth,
-              gender: dep.gender
+              date_of_birth: dep.dateOfBirth || null,
+              gender: dep.gender || null
             }))
           );
 
