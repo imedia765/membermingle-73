@@ -1,20 +1,32 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 
 export default function TermsAndConditions() {
   return (
     <div className="container mx-auto py-8 px-4">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-            Terms and Conditions
-          </CardTitle>
-          <p className="text-muted-foreground">Version 3 - April 2024</p>
-          <p className="text-lg font-semibold">Pakistan Welfare Association</p>
-          <p className="text-muted-foreground">Burton Upon Trent</p>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-4">
+          <Link to="/">
+            <Button variant="ghost" className="flex items-center gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+              Terms and Conditions
+            </CardTitle>
+            <p className="text-muted-foreground">Version 3 - April 2024</p>
+            <p className="text-lg font-semibold">Pakistan Welfare Association</p>
+            <p className="text-muted-foreground">Burton Upon Trent</p>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[calc(100vh-250px)] pr-4">
             <div className="space-y-6">
               <section>
                 <h2 className="text-xl font-semibold mb-2">1. Members Eligibility</h2>
@@ -109,9 +121,10 @@ export default function TermsAndConditions() {
                 <p className="text-center text-sm text-muted-foreground mt-4">© 2024 Pakistan Welfare Association. All rights reserved.</p>
               </div>
             </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
