@@ -10,17 +10,11 @@ import {
   MessageSquare, 
   TrashIcon,
   Eye,
-  UserPlus,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CoveredMembersOverview } from "@/components/members/CoveredMembersOverview";
 import { MembersHeader } from "@/components/members/MembersHeader";
 import { MembersSearch } from "@/components/members/MembersSearch";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 const members = [
   { 
@@ -66,51 +60,6 @@ export default function Members() {
       <MembersSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
       <CoveredMembersOverview members={members} />
 
-      <Card className="mb-4">
-        <CardContent>
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="default"
-                className="flex items-center gap-2 w-full justify-between bg-primary hover:bg-primary/90"
-              >
-                <div className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  <span>Paying Members Overview</span>
-                </div>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <ScrollArea className="h-[300px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member Name</TableHead>
-                      <TableHead>Membership No</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Payment</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {members.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell>{member.name}</TableCell>
-                        <TableCell>{member.membershipNo}</TableCell>
-                        <TableCell>{member.status}</TableCell>
-                        <TableCell>
-                          {member.paymentHistory[0]?.date || 'No payments'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
-
       <ScrollArea className="h-[calc(100vh-220px)]">
         <div className="space-y-4">
           {members.map((member) => (
@@ -151,7 +100,7 @@ export default function Members() {
               </div>
 
               {expandedMember === member.id && (
-                <CardContent className="border-t pt-4">
+                <CardContent className="border-t">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold mb-2">Contact Information</h4>
