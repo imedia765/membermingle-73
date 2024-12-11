@@ -22,7 +22,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Sample data structure with covered members
 const members = [
   { 
     id: 1, 
