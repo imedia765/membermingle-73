@@ -3,7 +3,6 @@ import { AccountSettingsSection } from "@/components/profile/AccountSettingsSect
 import { DocumentsSection } from "@/components/profile/DocumentsSection";
 import { PaymentHistorySection } from "@/components/profile/PaymentHistorySection";
 import { SupportSection } from "@/components/profile/SupportSection";
-import { TicketingSection } from "@/components/profile/TicketingSection";
 
 export default function Profile() {
   const [searchDate, setSearchDate] = useState("");
@@ -51,7 +50,6 @@ export default function Profile() {
           onSearchDateChange={setSearchDate}
           onSearchAmountChange={setSearchAmount}
         />
-        <TicketingSection />
         <SupportSection />
       </div>
     </div>
