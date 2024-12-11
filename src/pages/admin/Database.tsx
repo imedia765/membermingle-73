@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Upload, RefreshCw, FileJson } from "lucide-react";
 import { transformMemberData } from "@/utils/dataTransform";
 import { useToast } from "@/hooks/use-toast";
+import { insertMemberData } from "@/utils/databaseOperations";
 
 export default function Database() {
   const { toast } = useToast();
@@ -23,11 +24,9 @@ export default function Database() {
       
       console.log('After removing comments:', cleanedText);
 
-      // Step 2: Fix property names (more comprehensive)
+      // Step 2: Fix property names
       cleanedText = cleanedText
-        // Quote unquoted keys
         .replace(/({|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-        // Handle nested objects and arrays
         .replace(/:\s*{([^}]*)}/g, function(match, contents) {
           return ': {' + contents.replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '"$1":') + '}';
         });
@@ -36,13 +35,9 @@ export default function Database() {
 
       // Step 3: Fix common JSON syntax issues
       cleanedText = cleanedText
-        // Fix trailing commas
         .replace(/,(\s*[}\]])/g, '$1')
-        // Fix multiple consecutive commas
         .replace(/,\s*,/g, ',')
-        // Convert single quotes to double quotes
         .replace(/'([^']*)'/g, '"$1"')
-        // Remove empty lines
         .replace(/^\s*[\r\n]/gm, '');
       
       console.log('Final cleaned JSON:', cleanedText);
@@ -53,7 +48,6 @@ export default function Database() {
       } catch (parseError) {
         console.error('JSON Parse Error:', parseError);
         
-        // Enhanced error context
         const errorMessage = (parseError as SyntaxError).message;
         const positionMatch = errorMessage.match(/position (\d+)/);
         let errorContext = '';
@@ -99,23 +93,22 @@ export default function Database() {
 
       const transformedData = transformMemberData(jsonData);
 
-      // Create a blob with the transformed data
-      const blob = new Blob([JSON.stringify(transformedData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a link and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'transformed-members.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      try {
+        await insertMemberData(transformedData);
+        
+        toast({
+          title: "Data uploaded successfully",
+          description: "Your member data has been processed and stored in the database.",
+        });
+      } catch (error) {
+        console.error('Error storing data:', error);
+        toast({
+          title: "Error storing data",
+          description: error instanceof Error ? error.message : "An error occurred while storing the data.",
+          variant: "destructive",
+        });
+      }
 
-      toast({
-        title: "Data transformed successfully",
-        description: "Your data has been processed and downloaded with new member numbers.",
-      });
     } catch (error) {
       console.error('Error processing file:', error);
       toast({
