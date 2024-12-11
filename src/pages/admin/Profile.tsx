@@ -1,4 +1,4 @@
-import { Receipt, Ticket, HeadsetIcon, File, MailIcon, PhoneCall } from "lucide-react";
+import { Receipt, Ticket, HeadsetIcon, File, MailIcon, PhoneCall, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { AccountSettingsSection } from "@/components/profile/AccountSettingsSection";
 import { TicketingSection } from "@/components/profile/TicketingSection";
@@ -35,6 +35,24 @@ export default function Profile() {
   const documents = [
     { name: 'ID Document.pdf', uploadDate: '2024-03-01', type: 'Identification' },
     { name: 'Proof of Address.pdf', uploadDate: '2024-02-15', type: 'Address Proof' },
+  ];
+
+  const handleFileUpload = (type: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Here you would typically handle the file upload to your backend
+      toast({
+        title: "Document Upload",
+        description: `${type} document uploaded successfully: ${file.name}`,
+      });
+    }
+  };
+
+  const documentTypes = [
+    { type: 'Identification', description: 'Valid ID document (Passport, Driving License)' },
+    { type: 'Address Proof', description: 'Recent utility bill or bank statement' },
+    { type: 'Medical Certificate', description: 'Recent medical certificate if applicable' },
+    { type: 'Marriage Certificate', description: 'Marriage certificate if applicable' },
   ];
 
   return (
@@ -167,31 +185,56 @@ export default function Profile() {
             >
               <div className="flex items-center gap-2">
                 <File className="h-4 w-4" />
-                <span>Uploaded Documents</span>
+                <span>Documents</span>
               </div>
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4">
-            <ScrollArea className="h-[300px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Document Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Upload Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documents.map((doc, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{doc.name}</TableCell>
-                      <TableCell>{doc.type}</TableCell>
-                      <TableCell>{doc.uploadDate}</TableCell>
+            <div className="space-y-6">
+              {/* Upload Section */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {documentTypes.map((doc) => (
+                  <div key={doc.type} className="p-4 border rounded-lg space-y-2">
+                    <h3 className="font-medium">{doc.type}</h3>
+                    <p className="text-sm text-muted-foreground">{doc.description}</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        onChange={handleFileUpload(doc.type)}
+                        className="text-sm"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      <Button size="sm" className="flex items-center gap-1">
+                        <Upload className="h-4 w-4" />
+                        Upload
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Documents List */}
+              <ScrollArea className="h-[300px] mt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Upload Date</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                  <TableBody>
+                    {documents.map((doc, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{doc.name}</TableCell>
+                        <TableCell>{doc.type}</TableCell>
+                        <TableCell>{doc.uploadDate}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
           </CollapsibleContent>
         </Collapsible>
       </div>
