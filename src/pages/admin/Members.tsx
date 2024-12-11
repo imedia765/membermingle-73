@@ -1,20 +1,23 @@
 import { useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   ChevronDown, 
-  ChevronRight, 
-  Edit2, 
   MessageSquare, 
   TrashIcon,
   Eye,
+  Users,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CoveredMembersOverview } from "@/components/members/CoveredMembersOverview";
 import { MembersHeader } from "@/components/members/MembersHeader";
 import { MembersSearch } from "@/components/members/MembersSearch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const members = [
   { 
@@ -74,7 +77,7 @@ export default function Members() {
                     {expandedMember === member.id ? (
                       <ChevronDown className="h-4 w-4" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     )}
                   </Button>
                   <div>
@@ -87,6 +90,41 @@ export default function Members() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span>Family Members</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 p-2">
+                      {member.coveredMembers?.spouses?.length > 0 && (
+                        <div className="p-2">
+                          <h4 className="font-semibold mb-2">Spouse</h4>
+                          {member.coveredMembers.spouses.map((spouse, index) => (
+                            <div key={index} className="text-sm py-1">
+                              {spouse.name} ({spouse.dateOfBirth})
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {member.coveredMembers?.dependants?.length > 0 && (
+                        <div className="p-2">
+                          <h4 className="font-semibold mb-2">Dependants</h4>
+                          {member.coveredMembers.dependants.map((dependant, index) => (
+                            <div key={index} className="text-sm py-1">
+                              {dependant.name} ({dependant.relationship})
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {(!member.coveredMembers?.spouses?.length && !member.coveredMembers?.dependants?.length) && (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          No family members registered
+                        </div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button variant="outline" size="sm">
                     <Edit2 className="h-4 w-4" />
                   </Button>
