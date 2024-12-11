@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Send } from "lucide-react";
 import { TicketDetailsDialog } from "@/components/support/TicketDetailsDialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TicketResponse {
   id: string;
@@ -33,7 +35,32 @@ export default function Support() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState("all");
   const { toast } = useToast();
+
+  // Sample collector groups data
+  const collectorGroups = [
+    { id: "01", name: "Anjum Riaz Group" },
+    { id: "02", name: "Zabbie Group" },
+  ];
+
+  const handleSendNotice = () => {
+    if (!noticeMessage.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message to send",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Notice Sent",
+      description: `Notice sent to ${selectedGroup === "all" ? "all members" : `${selectedGroup} group`}`,
+    });
+    setNoticeMessage("");
+  };
 
   const [tickets] = useState<Ticket[]>([
     {
@@ -92,8 +119,52 @@ export default function Support() {
   return (
     <div className="space-y-6">
       <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-        Support Tickets
+        Support Management
       </h1>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Send Notices
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              <Select
+                value={selectedGroup}
+                onValueChange={setSelectedGroup}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select recipient group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Members</SelectItem>
+                  {collectorGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Textarea
+                placeholder="Enter your notice message here..."
+                value={noticeMessage}
+                onChange={(e) => setNoticeMessage(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <Button 
+                onClick={handleSendNotice}
+                className="w-full sm:w-auto"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send Notice
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
