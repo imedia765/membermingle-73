@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   ChevronDown, 
   MessageSquare, 
   TrashIcon,
   Eye,
   Users,
+  Pencil, // We'll use Pencil instead of Edit2 as it's the current icon name in lucide
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CoveredMembersOverview } from "@/components/members/CoveredMembersOverview";
@@ -74,11 +76,7 @@ export default function Members() {
                     size="sm"
                     onClick={() => toggleMember(member.id)}
                   >
-                    {expandedMember === member.id ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
                   <div>
                     <h3 className="text-lg font-semibold">
@@ -126,7 +124,7 @@ export default function Members() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Button variant="outline" size="sm">
-                    <Edit2 className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm">
                     <Eye className="h-4 w-4" />
