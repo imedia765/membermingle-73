@@ -54,16 +54,17 @@ export const MemberCard = ({
   return (
     <Card key={member.id} className="overflow-hidden">
       <div className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => toggleMember(member.id)}
+              className="mt-1"
             >
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h3 className="text-lg font-semibold">
                 {member.membershipNo} - {member.name}
               </h3>
@@ -72,11 +73,12 @@ export const MemberCard = ({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+          
+          <div className="flex flex-wrap gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Users className="h-4 w-4 mr-2" />
                   <span>Family Members</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -117,14 +119,17 @@ export const MemberCard = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm">
-              <Pencil className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Pencil className="h-4 w-4 mr-2" />
+              <span>Edit</span>
             </Button>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Eye className="h-4 w-4 mr-2" />
+              <span>View</span>
             </Button>
-            <Button variant="outline" size="sm" className="text-destructive">
-              <TrashIcon className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="w-full sm:w-auto text-destructive">
+              <TrashIcon className="h-4 w-4 mr-2" />
+              <span>Delete</span>
             </Button>
           </div>
         </div>
