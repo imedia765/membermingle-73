@@ -1,47 +1,39 @@
-export interface RawMemberImport {
-  "Member No": string | null;
-  "Unknown Author2024-07-30T14:49:00Author:\nName of member\nName": string;
-  "No": string;
-  "Unknown Author2024-07-30T14:49:00Author:\nAddress of member\nAddress": string;
-  "Collector": string;
-  "Checked": boolean | null;
-  "Notes": string | null;
-}
-
 export interface CleanMember {
-  full_name: string;
-  address: string | null;
+  name?: string;
+  fullName?: string;
+  address?: string;
   collector: string;
-  notes: string[];
-  verified: boolean;
+  email?: string;
+  gender?: string;
+  maritalStatus?: string;
+  mobileNo?: string;
+  dateOfBirth?: string | null;
+  postCode?: string;
+  town?: string;
+  verified?: boolean;
+  notes?: string[];
 }
 
-const cleanValue = (value: any): string | null => {
-  if (value === 0 || value === null || value === undefined || value === '') return null;
-  return String(value);
-};
+export function transformMemberData(jsonData: any[]): CleanMember[] {
+  return jsonData.map(item => {
+    // Handle the specific format from the file
+    const name = item["Unknown Author2024-07-30T14:49:00Author:\nName of member\nName"] || item.name;
+    const address = item["Unknown Author2024-07-30T14:49:00Author:\nAddress of member\nAddress"] || item.address;
+    const collector = item.Collector || item.collector;
 
-const mapCollectorName = (collectorCode: string): string => {
-  const collectorMap: { [key: string]: string } = {
-    'Tan&Anj': 'Anjum Riaz',
-    // Add more mappings as needed
-  };
-  return collectorMap[collectorCode] || collectorCode;
-};
-
-export const transformMemberData = (members: RawMemberImport[]): CleanMember[] => {
-  console.log('Starting data transformation for', members.length, 'members');
-  
-  return members.map((member) => {
-    const transformed: CleanMember = {
-      full_name: member["Unknown Author2024-07-30T14:49:00Author:\nName of member\nName"],
-      address: cleanValue(member["Unknown Author2024-07-30T14:49:00Author:\nAddress of member\nAddress"]),
-      collector: mapCollectorName(member.Collector),
-      notes: member.Notes ? [member.Notes] : [],
-      verified: member.Checked || false
+    return {
+      name,
+      address,
+      collector: collector?.trim() || '',
+      email: item.email || '',
+      gender: item.gender || null,
+      maritalStatus: item.maritalStatus || null,
+      mobileNo: item.mobileNo || '',
+      dateOfBirth: item.dateOfBirth || null,
+      postCode: item.postCode || '',
+      town: item.town || '',
+      verified: item.verified || false,
+      notes: Array.isArray(item.notes) ? item.notes : (item.Notes ? [item.Notes] : [])
     };
-
-    console.log('Transformed member:', transformed);
-    return transformed;
   });
-};
+}
