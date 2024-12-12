@@ -9,9 +9,9 @@ async function getNextCollectorNumber(): Promise<string> {
     .select('number')
     .order('number', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle(); // Use maybeSingle to handle empty results
 
-  if (queryError && !queryError.message.includes('contains 0 rows')) {
+  if (queryError) {
     console.error('Error querying last collector:', queryError);
     throw new Error(`Failed to get last collector number: ${queryError.message}`);
   }
@@ -33,7 +33,12 @@ async function ensureCollectorExists(collectorName: string): Promise<string> {
       .from('collectors')
       .select('id')
       .eq('name', collectorName)
-      .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
+      .maybeSingle(); // Use maybeSingle to handle empty results
+
+    if (findError) {
+      console.error('Error finding collector:', findError);
+      throw findError;
+    }
 
     if (existingCollector) {
       console.log('Found existing collector:', existingCollector);
@@ -42,8 +47,10 @@ async function ensureCollectorExists(collectorName: string): Promise<string> {
 
     // If not found, create new collector
     const nextNumber = await getNextCollectorNumber();
-    const prefix = collectorName
-      .split(/[\s&-]/) // Split on space, &, or -
+    
+    // Handle special characters in collector names
+    const nameParts = collectorName.split(/[\s&-]/); // Split on space, &, or -
+    const prefix = nameParts
       .map(part => part.substring(0, 2).toUpperCase()) // Take first 2 chars of each part
       .join(''); // Join them together
 
