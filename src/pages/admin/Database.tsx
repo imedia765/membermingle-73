@@ -1,18 +1,61 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Upload, RefreshCw, FileJson } from "lucide-react";
 import { transformMemberData } from "@/utils/dataTransform";
 import { useToast } from "@/hooks/use-toast";
 import { insertMemberData } from "@/utils/databaseOperations";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Database() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please login to access this page",
+          variant: "destructive",
+        });
+        navigate("/login");
+      }
+    };
+
+    checkAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        navigate("/login");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, toast]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
+      // Check authentication before proceeding
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please login to upload files",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
       const text = await file.text();
       console.log('Original text:', text);
       
@@ -55,6 +98,14 @@ export default function Database() {
         });
       } catch (error) {
         console.error('Error storing data:', error);
+        if (error instanceof Error && error.message.includes('row-level security policy')) {
+          toast({
+            title: "Permission Error",
+            description: "You don't have permission to perform this action. Please check your login status.",
+            variant: "destructive",
+          });
+          return;
+        }
         toast({
           title: "Error storing data",
           description: error instanceof Error ? error.message : "An error occurred while storing the data.",
