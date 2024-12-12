@@ -13,7 +13,6 @@ export default function Login() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -23,7 +22,6 @@ export default function Login() {
     
     checkSession();
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         navigate("/admin");
@@ -54,29 +52,7 @@ export default function Login() {
         description: "Welcome back!",
       });
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "An error occurred during login",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleMemberIdSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const memberId = formData.get("memberId") as string;
-    const password = formData.get("password") as string;
-
-    try {
-      // Here you might want to first fetch the email associated with the member ID
-      // For now, we'll just show an error
-      toast({
-        title: "Not implemented",
-        description: "Member ID login is not yet implemented",
-        variant: "destructive",
-      });
-    } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "An error occurred during login",
@@ -91,11 +67,16 @@ export default function Login() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/admin`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (error) throw error;
     } catch (error) {
+      console.error("Google login error:", error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "An error occurred during Google login",
@@ -133,37 +114,27 @@ export default function Login() {
 
           <Tabs defaultValue="email" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger 
-                value="email" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                Email
-              </TabsTrigger>
-              <TabsTrigger 
-                value="memberId"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                Member ID
-              </TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="memberId">Member ID</TabsTrigger>
             </TabsList>
 
             <TabsContent value="email">
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="email">Email</label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
+                    placeholder="Email"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="password">Password</label>
                   <Input
                     id="password"
                     name="password"
                     type="password"
+                    placeholder="Password"
                     required
                   />
                 </div>
@@ -174,22 +145,22 @@ export default function Login() {
             </TabsContent>
 
             <TabsContent value="memberId">
-              <form onSubmit={handleMemberIdSubmit} className="space-y-4">
+              <form className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="memberId">Member ID</label>
                   <Input
                     id="memberId"
                     name="memberId"
                     type="text"
+                    placeholder="Member ID"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="memberPassword">Password</label>
                   <Input
                     id="memberPassword"
                     name="password"
                     type="password"
+                    placeholder="Password"
                     required
                   />
                 </div>
