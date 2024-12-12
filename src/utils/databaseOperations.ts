@@ -1,53 +1,75 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CleanMember } from "./dataTransform";
 
-async function ensureCollectorExists(collectorName: string): Promise<string> {
-  console.log('Checking collector:', collectorName);
+async function getNextCollectorNumber(): Promise<string> {
+  console.log('Getting next collector number');
   
-  // First try to find existing collector
-  const { data: existingCollector, error: findError } = await supabase
-    .from('collectors')
-    .select('id')
-    .eq('name', collectorName)
-    .single();
-
-  if (existingCollector) {
-    console.log('Found existing collector:', existingCollector);
-    return existingCollector.id;
-  }
-
-  // If not found, get the next number
-  const { data: lastCollector } = await supabase
+  const { data: lastCollector, error: queryError } = await supabase
     .from('collectors')
     .select('number')
     .order('number', { ascending: false })
     .limit(1)
     .single();
 
+  if (queryError && !queryError.message.includes('contains 0 rows')) {
+    console.error('Error querying last collector:', queryError);
+    throw new Error(`Failed to get last collector number: ${queryError.message}`);
+  }
+
   const nextNumber = lastCollector 
     ? String(Number(lastCollector.number) + 1).padStart(2, '0')
     : '01';
+    
+  console.log('Next collector number:', nextNumber);
+  return nextNumber;
+}
 
-  console.log('Creating new collector with number:', nextNumber);
+async function ensureCollectorExists(collectorName: string): Promise<string> {
+  console.log('Checking collector:', collectorName);
+  
+  try {
+    // First try to find existing collector
+    const { data: existingCollector, error: findError } = await supabase
+      .from('collectors')
+      .select('id')
+      .eq('name', collectorName)
+      .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
 
-  // Create new collector
-  const { data: newCollector, error: insertError } = await supabase
-    .from('collectors')
-    .insert({
-      name: collectorName,
-      prefix: collectorName.substring(0, 2).toUpperCase(),
-      number: nextNumber,
-    })
-    .select('id')
-    .single();
+    if (existingCollector) {
+      console.log('Found existing collector:', existingCollector);
+      return existingCollector.id;
+    }
 
-  if (insertError) {
-    console.error('Error creating collector:', insertError);
-    throw new Error(`Failed to create collector: ${insertError.message}`);
+    // If not found, create new collector
+    const nextNumber = await getNextCollectorNumber();
+    const prefix = collectorName
+      .split(/[\s&-]/) // Split on space, &, or -
+      .map(part => part.substring(0, 2).toUpperCase()) // Take first 2 chars of each part
+      .join(''); // Join them together
+
+    console.log('Creating new collector with prefix:', prefix, 'and number:', nextNumber);
+
+    const { data: newCollector, error: insertError } = await supabase
+      .from('collectors')
+      .insert({
+        name: collectorName,
+        prefix: prefix,
+        number: nextNumber,
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      console.error('Error creating collector:', insertError);
+      throw new Error(`Failed to create collector: ${insertError.message}`);
+    }
+
+    console.log('Created new collector:', newCollector);
+    return newCollector.id;
+  } catch (error) {
+    console.error('Error in ensureCollectorExists:', error);
+    throw error;
   }
-
-  console.log('Created new collector:', newCollector);
-  return newCollector.id;
 }
 
 export async function insertMemberData(transformedData: CleanMember[]) {
