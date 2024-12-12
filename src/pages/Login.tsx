@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,41 +6,102 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icons } from "@/components/ui/icons";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [memberId, setMemberId] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement actual email authentication
-    toast({
-      title: "Login successful",
-      description: "Welcome back!",
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/admin");
+      }
+    };
+    
+    checkSession();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate("/admin");
+      }
     });
-    navigate("/admin");
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An error occurred during login",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleMemberIdSubmit = (e: React.FormEvent) => {
+  const handleMemberIdSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Implement actual member ID authentication
-    toast({
-      title: "Login successful",
-      description: "Welcome back!",
-    });
-    navigate("/admin");
+    const formData = new FormData(e.currentTarget);
+    const memberId = formData.get("memberId") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      // Here you might want to first fetch the email associated with the member ID
+      // For now, we'll just show an error
+      toast({
+        title: "Not implemented",
+        description: "Member ID login is not yet implemented",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An error occurred during login",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement actual Google authentication
-    toast({
-      title: "Google login successful",
-      description: "Welcome back!",
-    });
-    navigate("/admin");
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/admin`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An error occurred during Google login",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -70,7 +131,7 @@ export default function Login() {
             </div>
           </div>
 
-          <Tabs defaultValue="memberId" className="w-full">
+          <Tabs defaultValue="email" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger 
                 value="email" 
@@ -92,9 +153,8 @@ export default function Login() {
                   <label htmlFor="email">Email</label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -102,9 +162,8 @@ export default function Login() {
                   <label htmlFor="password">Password</label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                 </div>
@@ -120,9 +179,8 @@ export default function Login() {
                   <label htmlFor="memberId">Member ID</label>
                   <Input
                     id="memberId"
+                    name="memberId"
                     type="text"
-                    value={memberId}
-                    onChange={(e) => setMemberId(e.target.value)}
                     required
                   />
                 </div>
@@ -130,9 +188,8 @@ export default function Login() {
                   <label htmlFor="memberPassword">Password</label>
                   <Input
                     id="memberPassword"
+                    name="password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                 </div>
