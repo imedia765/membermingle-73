@@ -24,45 +24,15 @@ export default function Database() {
       
       console.log('After removing comments:', cleanedText);
 
-      // Step 2: Fix property names
-      cleanedText = cleanedText
-        .replace(/({|,)\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-        .replace(/:\s*{([^}]*)}/g, function(match, contents) {
-          return ': {' + contents.replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '"$1":') + '}';
-        });
-      
-      console.log('After fixing property names:', cleanedText);
-
-      // Step 3: Fix common JSON syntax issues
-      cleanedText = cleanedText
-        .replace(/,(\s*[}\]])/g, '$1')
-        .replace(/,\s*,/g, ',')
-        .replace(/'([^']*)'/g, '"$1"')
-        .replace(/^\s*[\r\n]/gm, '');
-      
-      console.log('Final cleaned JSON:', cleanedText);
-
       let jsonData;
       try {
         jsonData = JSON.parse(cleanedText);
+        console.log('Parsed JSON data:', jsonData);
       } catch (parseError) {
         console.error('JSON Parse Error:', parseError);
-        
-        const errorMessage = (parseError as SyntaxError).message;
-        const positionMatch = errorMessage.match(/position (\d+)/);
-        let errorContext = '';
-        
-        if (positionMatch) {
-          const position = parseInt(positionMatch[1]);
-          const start = Math.max(0, position - 100);
-          const end = Math.min(cleanedText.length, position + 100);
-          
-          errorContext = `\nError context:\n${cleanedText.slice(start, end)}\n${'~'.repeat(100)}\nError at position ${position}`;
-        }
-
         toast({
           title: "Invalid JSON Format",
-          description: `Please check your JSON formatting. ${errorMessage}${errorContext}\n\nCommon issues:\n- Missing quotes around property names\n- Trailing commas\n- Unmatched brackets\n- Invalid values`,
+          description: "Please ensure your JSON file is properly formatted.",
           variant: "destructive",
         });
         return;
@@ -73,25 +43,8 @@ export default function Database() {
         jsonData = [jsonData];
       }
 
-      // Validate required fields
-      const validData = jsonData.every((item: any) => {
-        return (
-          item.name || 
-          item.fullName || 
-          item.collector
-        );
-      });
-
-      if (!validData) {
-        toast({
-          title: "Invalid Data Format",
-          description: "Each member record must contain at least a name/fullName and collector.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const transformedData = transformMemberData(jsonData);
+      console.log('Transformed data:', transformedData);
 
       try {
         await insertMemberData(transformedData);

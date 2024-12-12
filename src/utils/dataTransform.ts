@@ -1,33 +1,18 @@
-export interface RawMember {
-  address?: string;
-  collector: string;
-  dateOfBirth?: string | number;
-  dependants?: any[];
-  email?: string;
-  fullName?: string;
-  name: string;
-  gender?: string;
-  maritalStatus?: string;
-  mobileNo?: string;
-  notes?: string[];
-  postCode?: string;
-  town?: string;
-  verified?: boolean;
+export interface RawMemberImport {
+  "Member No": string | null;
+  "Unknown Author2024-07-30T14:49:00Author:\nName of member\nName": string;
+  "No": string;
+  "Unknown Author2024-07-30T14:49:00Author:\nAddress of member\nAddress": string;
+  "Collector": string;
+  "Checked": boolean | null;
+  "Notes": string | null;
 }
 
 export interface CleanMember {
+  full_name: string;
   address: string | null;
   collector: string;
-  dateOfBirth: string | null;
-  dependants: any[];
-  email: string | null;
-  fullName: string;
-  gender: string | null;
-  maritalStatus: string | null;
-  mobileNo: string | null;
   notes: string[];
-  postCode: string | null;
-  town: string | null;
   verified: boolean;
 }
 
@@ -36,25 +21,27 @@ const cleanValue = (value: any): string | null => {
   return String(value);
 };
 
-const cleanArray = (value: any): any[] => {
-  if (Array.isArray(value)) return value;
-  return [];
+const mapCollectorName = (collectorCode: string): string => {
+  const collectorMap: { [key: string]: string } = {
+    'Tan&Anj': 'Anjum Riaz',
+    // Add more mappings as needed
+  };
+  return collectorMap[collectorCode] || collectorCode;
 };
 
-export const transformMemberData = (members: RawMember[]): CleanMember[] => {
-  return members.map((member) => ({
-    address: cleanValue(member.address),
-    collector: member.collector,
-    dateOfBirth: cleanValue(member.dateOfBirth),
-    dependants: cleanArray(member.dependants),
-    email: cleanValue(member.email),
-    fullName: member.fullName || member.name,
-    gender: cleanValue(member.gender),
-    maritalStatus: cleanValue(member.maritalStatus),
-    mobileNo: cleanValue(member.mobileNo),
-    notes: cleanArray(member.notes),
-    postCode: cleanValue(member.postCode),
-    town: cleanValue(member.town),
-    verified: Boolean(member.verified)
-  }));
+export const transformMemberData = (members: RawMemberImport[]): CleanMember[] => {
+  console.log('Starting data transformation for', members.length, 'members');
+  
+  return members.map((member) => {
+    const transformed: CleanMember = {
+      full_name: member["Unknown Author2024-07-30T14:49:00Author:\nName of member\nName"],
+      address: cleanValue(member["Unknown Author2024-07-30T14:49:00Author:\nAddress of member\nAddress"]),
+      collector: mapCollectorName(member.Collector),
+      notes: member.Notes ? [member.Notes] : [],
+      verified: member.Checked || false
+    };
+
+    console.log('Transformed member:', transformed);
+    return transformed;
+  });
 };
