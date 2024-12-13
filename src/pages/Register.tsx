@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { PersonalInfoSection } from "@/components/registration/PersonalInfoSection";
 import { NextOfKinSection } from "@/components/registration/NextOfKinSection";
 import { SpousesSection } from "@/components/registration/SpousesSection";
@@ -9,18 +9,64 @@ import { DependantsSection } from "@/components/registration/DependantsSection";
 import { MembershipSection } from "@/components/registration/MembershipSection";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+function generateTempPassword() {
+  const length = 12;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
 
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast({
-      title: "Registration submitted",
-      description: "Your registration has been submitted successfully.",
-    });
-    navigate("/login");
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const fullName = formData.get("fullName") as string;
+
+    try {
+      // Generate a temporary password
+      const tempPassword = generateTempPassword();
+      console.log('Attempting to create user and send welcome email');
+
+      // Call the edge function to create user and send welcome email
+      const { data, error } = await supabase.functions.invoke('send-welcome-email', {
+        body: {
+          email,
+          tempPassword,
+          fullName,
+        },
+      });
+
+      if (error) {
+        console.error('Error during registration:', error);
+        throw error;
+      }
+
+      console.log('Registration successful:', data);
+
+      toast({
+        title: "Registration successful",
+        description: "Please check your email for your temporary password to login.",
+      });
+      
+      navigate("/login");
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "An error occurred during registration",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
