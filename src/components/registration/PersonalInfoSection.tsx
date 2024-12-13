@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UseFormRegister } from "react-hook-form";
 
 interface PersonalInfoProps {
-  register: UseFormRegister<any>; // We'll properly type this when implementing form handling
+  register: UseFormRegister<any>;
 }
 
 export const PersonalInfoSection = ({ register }: PersonalInfoProps) => {
@@ -14,38 +14,38 @@ export const PersonalInfoSection = ({ register }: PersonalInfoProps) => {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="fullName">Full Name</label>
-          <Input 
-            id="fullName" 
+          <Input
+            id="fullName"
             {...register("fullName", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="address">Address</label>
-          <Textarea 
-            id="address" 
+          <Textarea
+            id="address"
             {...register("address", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="town">Town</label>
-          <Input 
-            id="town" 
+          <Input
+            id="town"
             {...register("town", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="postCode">Post Code</label>
-          <Input 
-            id="postCode" 
+          <Input
+            id="postCode"
             {...register("postCode", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="email">Email</label>
-          <Input 
-            type="email" 
-            id="email" 
-            {...register("email", { 
+          <Input
+            type="email"
+            id="email"
+            {...register("email", {
               required: true,
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -56,10 +56,10 @@ export const PersonalInfoSection = ({ register }: PersonalInfoProps) => {
         </div>
         <div className="space-y-2">
           <label htmlFor="password">Password</label>
-          <Input 
-            type="password" 
-            id="password" 
-            {...register("password", { 
+          <Input
+            type="password"
+            id="password"
+            {...register("password", {
               required: true,
               minLength: {
                 value: 8,
@@ -70,24 +70,24 @@ export const PersonalInfoSection = ({ register }: PersonalInfoProps) => {
         </div>
         <div className="space-y-2">
           <label htmlFor="mobile">Mobile No</label>
-          <Input 
-            type="tel" 
-            id="mobile" 
+          <Input
+            type="tel"
+            id="mobile"
             {...register("mobile", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="dob">Date of Birth</label>
-          <Input 
-            type="date" 
-            id="dob" 
+          <Input
+            type="date"
+            id="dob"
             {...register("dob", { required: true })}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="pob">Place of Birth</label>
-          <Input 
-            id="pob" 
+          <Input
+            id="pob"
             {...register("pob", { required: true })}
           />
         </div>

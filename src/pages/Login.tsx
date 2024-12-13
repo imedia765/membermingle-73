@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icons } from "@/components/ui/icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     console.log("Login component mounted - checking session");
@@ -30,6 +31,8 @@ export default function Login() {
       if (event === "SIGNED_IN" && session) {
         console.log("Sign in event detected, redirecting to admin");
         navigate("/admin");
+      } else if (event === "SIGNED_OUT") {
+        setIsLoggedIn(false);
       }
     });
 
@@ -61,6 +64,7 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back!",
       });
+      setIsLoggedIn(true);
     } catch (error) {
       console.error("Email login error:", error);
       toast({
@@ -147,6 +151,25 @@ export default function Login() {
     }
   };
 
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+            setIsLoggedIn(false);
+            toast({
+                title: "Logged out",
+                description: "You have been logged out successfully.",
+            });
+            navigate("/login");
+        } catch (error) {
+            console.error("Logout error:", error);
+            toast({
+                title: "Logout failed",
+                description: error instanceof Error ? error.message : "An error occurred during logout",
+                variant: "destructive",
+            });
+        }
+    };
+
   return (
     <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
       <Card className="w-full max-w-md">
@@ -154,6 +177,12 @@ export default function Login() {
           <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
         </CardHeader>
         <CardContent>
+        {isLoggedIn ? (
+            <Button onClick={handleLogout} className="w-full">
+                Logout
+            </Button>
+        ) : (
+            <>
           <Button 
             variant="outline" 
             className="w-full mb-6 h-12 text-lg bg-white hover:bg-gray-50 border-2 shadow-sm text-gray-700 font-medium" 
@@ -239,6 +268,8 @@ export default function Login() {
               Register here
             </Link>
           </div>
+          </>
+        )}
         </CardContent>
       </Card>
     </div>
