@@ -67,10 +67,7 @@ export default function Login() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/admin`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          skipBrowserRedirect: true, // This prevents automatic redirect
         },
       });
 
