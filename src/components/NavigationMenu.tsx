@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "./ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 
 export function NavigationMenu() {
   const [open, setOpen] = useState(false);
@@ -79,11 +79,13 @@ export function NavigationMenu() {
               Register
             </Button>
           </Link>
-          <Link to="/admin">
-            <Button variant="outline" size="sm">
-              Admin Panel
-            </Button>
-          </Link>
+          {isLoggedIn && (
+            <Link to="/admin">
+              <Button variant="outline" size="sm">
+                Admin Panel
+              </Button>
+            </Link>
+          )}
           <ThemeToggle />
         </div>
 
@@ -126,13 +128,15 @@ export function NavigationMenu() {
                 >
                   Register
                 </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-                  onClick={() => handleNavigation("/admin")}
-                >
-                  Admin Panel
-                </Button>
+                {isLoggedIn && (
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                    onClick={() => handleNavigation("/admin")}
+                  >
+                    Admin Panel
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>
