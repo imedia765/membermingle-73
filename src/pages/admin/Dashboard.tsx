@@ -1,10 +1,10 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card/card';
 import { Users, UserCheck, ClipboardList, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Button } from "src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { supabase } from "src/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { PostgrestQueryBuilder } from "@supabase/postgrest-js";
 
 // Define a type for the 'registrations' table
