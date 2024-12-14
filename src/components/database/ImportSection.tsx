@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileJson } from "lucide-react";
@@ -24,6 +24,23 @@ interface ImportData {
 export function ImportSection() {
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const validateJsonData = (data: any[]): ImportData[] => {
     if (!Array.isArray(data)) {
@@ -53,6 +70,15 @@ export function ImportSection() {
   };
 
   const importData = async () => {
+    if (!session) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to import data",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsImporting(true);
     try {
       const response = await fetch('/pwadb.json');
@@ -178,12 +204,17 @@ export function ImportSection() {
         </p>
         <Button 
           onClick={importData} 
-          disabled={isImporting}
+          disabled={isImporting || !session}
           className="w-full flex items-center gap-2"
         >
           <FileJson className="h-4 w-4" />
           {isImporting ? "Importing..." : "Import Data"}
         </Button>
+        {!session && (
+          <p className="text-sm text-red-500">
+            Please log in to import data
+          </p>
+        )}
       </CardContent>
     </Card>
   );
