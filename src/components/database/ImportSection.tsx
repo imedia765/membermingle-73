@@ -25,12 +25,44 @@ export function ImportSection() {
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
 
+  const validateJsonData = (data: any[]): data is ImportData[] => {
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid JSON format: expected an array');
+    }
+
+    data.forEach((item, index) => {
+      if (typeof item !== 'object' || item === null) {
+        throw new Error(`Invalid item at index ${index}: expected an object`);
+      }
+      
+      // Validate required fields
+      if (!item.collector) {
+        throw new Error(`Missing collector at index ${index}`);
+      }
+      if (!item.fullName && !item.name) {
+        throw new Error(`Missing name at index ${index}`);
+      }
+    });
+
+    return true;
+  };
+
   const importData = async () => {
     setIsImporting(true);
     try {
       const response = await fetch('/pwadb.json');
-      const data = await response.json() as ImportData[];
-      console.log('Importing data:', data);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch JSON file: ${response.statusText}`);
+      }
+
+      const rawData = await response.json();
+      console.log('Raw data:', rawData);
+
+      if (!validateJsonData(rawData)) {
+        throw new Error('Invalid data format');
+      }
+
+      const data = rawData as ImportData[];
 
       // Process collectors first
       const uniqueCollectors = [...new Set(data.map(item => item.collector).filter(Boolean))];
