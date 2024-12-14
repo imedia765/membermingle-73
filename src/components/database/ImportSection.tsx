@@ -6,6 +6,21 @@ import { useToast } from "@/hooks/use-toast";
 import { transformMemberForSupabase, transformCollectorForSupabase } from "@/utils/dataCleanup";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ImportData {
+  collector: string;
+  fullName: string;
+  name: string;
+  address?: string;
+  email?: string;
+  gender?: string;
+  maritalStatus?: string;
+  mobileNo?: string;
+  dateOfBirth?: string;
+  postCode?: string;
+  town?: string;
+  verified?: boolean;
+}
+
 export function ImportSection() {
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
@@ -14,16 +29,14 @@ export function ImportSection() {
     setIsImporting(true);
     try {
       const response = await fetch('/pwadb.json');
-      const data = await response.json();
+      const data = await response.json() as ImportData[];
       console.log('Importing data:', data);
 
       // Process collectors first
-      const uniqueCollectors = [...new Set(data.map((item: any) => item.collector))];
+      const uniqueCollectors = [...new Set(data.map(item => item.collector).filter(Boolean))];
       console.log('Unique collectors:', uniqueCollectors);
 
       for (const collectorName of uniqueCollectors) {
-        if (!collectorName) continue;
-
         // Check if collector already exists
         const { data: existingCollector } = await supabase
           .from('collectors')
