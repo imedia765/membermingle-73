@@ -140,6 +140,7 @@ export type Database = {
           id: string
           marital_status: string | null
           member_number: string
+          membership_type: string | null
           phone: string | null
           postcode: string | null
           status: string | null
@@ -158,6 +159,7 @@ export type Database = {
           id?: string
           marital_status?: string | null
           member_number: string
+          membership_type?: string | null
           phone?: string | null
           postcode?: string | null
           status?: string | null
@@ -176,6 +178,7 @@ export type Database = {
           id?: string
           marital_status?: string | null
           member_number?: string
+          membership_type?: string | null
           phone?: string | null
           postcode?: string | null
           status?: string | null

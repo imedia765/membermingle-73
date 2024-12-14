@@ -16,32 +16,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MemberCardProps {
   member: {
-    id: number;
-    name: string;
-    membershipNo: string;
+    id: string;
+    full_name: string;
+    member_number: string;
     status: string;
-    joinDate: string;
+    created_at: string;
     email: string;
     phone: string;
     address: string;
-    paymentHistory: Array<{
-      date: string;
-      amount: number;
-      status: string;
-    }>;
-    adminNotes: string;
-    coveredMembers?: {
-      spouses?: Array<{ name: string; dateOfBirth: string }>;
-      dependants?: Array<{ name: string; dateOfBirth: string; relationship: string }>;
-    };
   };
-  expandedMember: number | null;
-  editingNotes: number | null;
-  toggleMember: (id: number) => void;
-  setEditingNotes: (id: number | null) => void;
+  expandedMember: string | null;
+  editingNotes: string | null;
+  toggleMember: (id: string) => void;
+  setEditingNotes: (id: string | null) => void;
 }
 
 export const MemberCard = ({ 
@@ -51,6 +43,59 @@ export const MemberCard = ({
   toggleMember, 
   setEditingNotes 
 }: MemberCardProps) => {
+  // Fetch family members
+  const { data: familyMembers } = useQuery({
+    queryKey: ['familyMembers', member.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('member_id', member.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!member.id
+  });
+
+  // Fetch payments
+  const { data: payments } = useQuery({
+    queryKey: ['payments', member.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('member_id', member.id)
+        .order('payment_date', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!member.id
+  });
+
+  // Fetch admin notes
+  const { data: adminNotes } = useQuery({
+    queryKey: ['adminNotes', member.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_notes')
+        .select('*')
+        .eq('member_id', member.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!member.id
+  });
+
+  const spouses = familyMembers?.filter(fm => fm.relationship === 'spouse') || [];
+  const dependants = familyMembers?.filter(fm => fm.relationship !== 'spouse') || [];
+
   return (
     <Card key={member.id} className="overflow-hidden">
       <div className="p-4">
@@ -66,10 +111,10 @@ export const MemberCard = ({
             </Button>
             <div className="flex-1">
               <h3 className="text-lg font-semibold">
-                {member.membershipNo} - {member.name}
+                {member.member_number} - {member.full_name}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Status: {member.status} | Joined: {member.joinDate}
+                Status: {member.status} | Joined: {new Date(member.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -85,34 +130,34 @@ export const MemberCard = ({
               <DropdownMenuContent className="w-56">
                 <DropdownMenuLabel>Covered Members</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {member.coveredMembers?.spouses?.length > 0 && (
+                {spouses.length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-sm font-semibold">Spouse</div>
-                    {member.coveredMembers.spouses.map((spouse, index) => (
+                    {spouses.map((spouse, index) => (
                       <div key={index} className="px-2 py-1.5 text-sm">
                         {spouse.name}
                         <div className="text-xs text-muted-foreground">
-                          Born: {spouse.dateOfBirth}
+                          Born: {new Date(spouse.date_of_birth).toLocaleDateString()}
                         </div>
                       </div>
                     ))}
                     <DropdownMenuSeparator />
                   </>
                 )}
-                {member.coveredMembers?.dependants?.length > 0 && (
+                {dependants.length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-sm font-semibold">Dependants</div>
-                    {member.coveredMembers.dependants.map((dependant, index) => (
+                    {dependants.map((dependant, index) => (
                       <div key={index} className="px-2 py-1.5 text-sm">
                         {dependant.name}
                         <div className="text-xs text-muted-foreground">
-                          {dependant.relationship} | Born: {dependant.dateOfBirth}
+                          {dependant.relationship} | Born: {new Date(dependant.date_of_birth).toLocaleDateString()}
                         </div>
                       </div>
                     ))}
                   </>
                 )}
-                {(!member.coveredMembers?.spouses?.length && !member.coveredMembers?.dependants?.length) && (
+                {(!spouses.length && !dependants.length) && (
                   <div className="px-2 py-1.5 text-sm text-muted-foreground">
                     No family members registered
                   </div>
@@ -147,9 +192,9 @@ export const MemberCard = ({
             <div>
               <h4 className="font-semibold mb-2">Payment History</h4>
               <div className="space-y-2">
-                {member.paymentHistory.map((payment, index) => (
+                {payments?.map((payment, index) => (
                   <div key={index} className="text-sm flex justify-between">
-                    <span>{payment.date}</span>
+                    <span>{new Date(payment.payment_date).toLocaleDateString()}</span>
                     <span>£{payment.amount}</span>
                     <span className="text-green-500">{payment.status}</span>
                   </div>
@@ -172,11 +217,11 @@ export const MemberCard = ({
             </div>
             {editingNotes === member.id ? (
               <Textarea 
-                defaultValue={member.adminNotes}
+                defaultValue={adminNotes?.note || ''}
                 className="min-h-[100px]"
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{member.adminNotes}</p>
+              <p className="text-sm text-muted-foreground">{adminNotes?.note || 'No admin notes'}</p>
             )}
           </div>
         </CardContent>
