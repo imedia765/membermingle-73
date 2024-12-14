@@ -24,9 +24,7 @@ export function ImportSection() {
       for (const collectorName of uniqueCollectors) {
         if (!collectorName) continue;
 
-        const collectorData = transformCollectorForSupabase(collectorName);
-        console.log('Inserting collector:', collectorData);
-
+        // Check if collector already exists
         const { data: existingCollector } = await supabase
           .from('collectors')
           .select('id')
@@ -34,6 +32,9 @@ export function ImportSection() {
           .single();
 
         if (!existingCollector) {
+          const collectorData = await transformCollectorForSupabase(collectorName);
+          console.log('Inserting collector:', collectorData);
+
           const { error: collectorError } = await supabase
             .from('collectors')
             .insert(collectorData);
