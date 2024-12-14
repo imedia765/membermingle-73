@@ -25,26 +25,31 @@ export function ImportSection() {
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
 
-  const validateJsonData = (data: any[]): data is ImportData[] => {
+  const validateJsonData = (data: any[]): ImportData[] => {
     if (!Array.isArray(data)) {
       throw new Error('Invalid JSON format: expected an array');
     }
 
-    data.forEach((item, index) => {
+    // Filter out invalid entries and transform valid ones
+    const validData = data.filter((item) => {
       if (typeof item !== 'object' || item === null) {
-        throw new Error(`Invalid item at index ${index}: expected an object`);
+        console.log('Skipping invalid item:', item);
+        return false;
       }
       
-      // Validate required fields
-      if (!item.collector) {
-        throw new Error(`Missing collector at index ${index}`);
+      if (!item.collector || (!item.fullName && !item.name)) {
+        console.log('Skipping item missing required fields:', item);
+        return false;
       }
-      if (!item.fullName && !item.name) {
-        throw new Error(`Missing name at index ${index}`);
-      }
+
+      return true;
     });
 
-    return true;
+    if (validData.length === 0) {
+      throw new Error('No valid data entries found');
+    }
+
+    return validData as ImportData[];
   };
 
   const importData = async () => {
@@ -58,14 +63,11 @@ export function ImportSection() {
       const rawData = await response.json();
       console.log('Raw data:', rawData);
 
-      if (!validateJsonData(rawData)) {
-        throw new Error('Invalid data format');
-      }
-
-      const data = rawData as ImportData[];
+      const validData = validateJsonData(rawData);
+      console.log('Valid data entries:', validData.length);
 
       // Process collectors first
-      const uniqueCollectors = [...new Set(data.map(item => item.collector).filter(Boolean))];
+      const uniqueCollectors = [...new Set(validData.map(item => item.collector).filter(Boolean))];
       console.log('Unique collectors:', uniqueCollectors);
 
       for (const collectorName of uniqueCollectors) {
@@ -92,7 +94,7 @@ export function ImportSection() {
       }
 
       // Process members
-      for (const member of data) {
+      for (const member of validData) {
         if (!member.collector) continue;
 
         // Get collector ID
