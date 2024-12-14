@@ -2,11 +2,10 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, RefreshCw, FileJson } from "lucide-react";
-import { transformMemberData } from "@/utils/dataTransform";
+import { Download, Upload, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { insertMemberData } from "@/utils/databaseOperations";
 import { supabase } from "@/integrations/supabase/client";
+import { ImportSection } from "@/components/database/ImportSection";
 
 export default function Database() {
   const { toast } = useToast();
@@ -27,7 +26,6 @@ export default function Database() {
 
     checkAuth();
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         navigate("/login");
@@ -39,90 +37,6 @@ export default function Database() {
     };
   }, [navigate, toast]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      // Check authentication before proceeding
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please login to upload files",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      const text = await file.text();
-      console.log('Original text:', text);
-      
-      // Step 1: Remove comments and whitespace
-      let cleanedText = text
-        .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
-      console.log('After removing comments:', cleanedText);
-
-      let jsonData;
-      try {
-        jsonData = JSON.parse(cleanedText);
-        console.log('Parsed JSON data:', jsonData);
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        toast({
-          title: "Invalid JSON Format",
-          description: "Please ensure your JSON file is properly formatted.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Ensure the data is an array
-      if (!Array.isArray(jsonData)) {
-        jsonData = [jsonData];
-      }
-
-      const transformedData = transformMemberData(jsonData);
-      console.log('Transformed data:', transformedData);
-
-      try {
-        await insertMemberData(transformedData);
-        
-        toast({
-          title: "Data uploaded successfully",
-          description: "Your member data has been processed and stored in the database.",
-        });
-      } catch (error) {
-        console.error('Error storing data:', error);
-        if (error instanceof Error && error.message.includes('row-level security policy')) {
-          toast({
-            title: "Permission Error",
-            description: "You don't have permission to perform this action. Please check your login status.",
-            variant: "destructive",
-          });
-          return;
-        }
-        toast({
-          title: "Error storing data",
-          description: error instanceof Error ? error.message : "An error occurred while storing the data.",
-          variant: "destructive",
-        });
-      }
-
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast({
-        title: "Error processing file",
-        description: "An error occurred while processing your file. Please check the console for details.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
@@ -130,34 +44,7 @@ export default function Database() {
       </h1>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Transform Member Data</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Upload your JSON file to transform member data and generate new member numbers.
-              The processed file will be automatically downloaded.
-            </p>
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="json-upload"
-              />
-              <label htmlFor="json-upload" className="w-full">
-                <Button className="w-full flex items-center gap-2" variant="outline" asChild>
-                  <span>
-                    <FileJson className="h-4 w-4" />
-                    Upload JSON File
-                  </span>
-                </Button>
-              </label>
-            </div>
-          </CardContent>
-        </Card>
+        <ImportSection />
 
         <Card>
           <CardHeader>
