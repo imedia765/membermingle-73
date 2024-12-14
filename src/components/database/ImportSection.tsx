@@ -8,8 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ImportData {
   collector: string;
-  fullName: string;
-  name: string;
+  fullName?: string;
+  name?: string;
   address?: string;
   email?: string;
   gender?: string;
@@ -70,55 +70,83 @@ export function ImportSection() {
       const uniqueCollectors = [...new Set(validData.map(item => item.collector).filter(Boolean))];
       console.log('Unique collectors:', uniqueCollectors);
 
+      // Create a map to store collector IDs
+      const collectorIdMap = new Map<string, string>();
+
       for (const collectorName of uniqueCollectors) {
-        // Check if collector already exists
-        const { data: existingCollector } = await supabase
-          .from('collectors')
-          .select('id')
-          .eq('name', collectorName)
-          .single();
-
-        if (!existingCollector) {
-          const collectorData = await transformCollectorForSupabase(collectorName);
-          console.log('Inserting collector:', collectorData);
-
-          const { error: collectorError } = await supabase
+        try {
+          // Check if collector already exists
+          const { data: existingCollectors, error: searchError } = await supabase
             .from('collectors')
-            .insert(collectorData);
+            .select('id')
+            .eq('name', collectorName);
 
-          if (collectorError) {
-            console.error('Error inserting collector:', collectorError);
-            throw collectorError;
+          if (searchError) {
+            console.error('Error searching for collector:', searchError);
+            continue;
           }
+
+          let collectorId: string;
+
+          if (!existingCollectors || existingCollectors.length === 0) {
+            // Collector doesn't exist, create new one
+            const collectorData = await transformCollectorForSupabase(collectorName);
+            console.log('Inserting collector:', collectorData);
+
+            const { data: newCollector, error: insertError } = await supabase
+              .from('collectors')
+              .insert(collectorData)
+              .select('id')
+              .single();
+
+            if (insertError) {
+              console.error('Error inserting collector:', insertError);
+              continue;
+            }
+
+            collectorId = newCollector.id;
+          } else {
+            collectorId = existingCollectors[0].id;
+          }
+
+          // Store the collector ID in our map
+          collectorIdMap.set(collectorName, collectorId);
+          
+        } catch (error) {
+          console.error(`Error processing collector ${collectorName}:`, error);
+          continue;
         }
       }
 
       // Process members
       for (const member of validData) {
-        if (!member.collector) continue;
+        try {
+          if (!member.collector) continue;
 
-        // Get collector ID
-        const { data: collectorData } = await supabase
-          .from('collectors')
-          .select('id')
-          .eq('name', member.collector)
-          .single();
+          const collectorId = collectorIdMap.get(member.collector);
+          if (!collectorId) {
+            console.error(`No collector ID found for ${member.collector}`);
+            continue;
+          }
 
-        if (collectorData) {
           const memberData = transformMemberForSupabase(member);
-          console.log('Inserting member:', { ...memberData, collector_id: collectorData.id });
+          console.log('Inserting member:', { ...memberData, collector_id: collectorId });
 
           const { error: memberError } = await supabase
             .from('members')
             .insert({
               ...memberData,
-              collector_id: collectorData.id,
+              collector_id: collectorId,
             });
 
           if (memberError) {
             console.error('Error inserting member:', memberError);
-            throw memberError;
+            continue;
           }
+
+        } catch (error) {
+          console.error('Error processing member:', error);
+          continue;
         }
       }
 
