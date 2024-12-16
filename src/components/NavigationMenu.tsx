@@ -14,54 +14,43 @@ export function NavigationMenu() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initial session check
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Session check error:", error);
-          setIsLoggedIn(false);
           return;
         }
-        console.log("Initial session check:", { session });
         setIsLoggedIn(!!session);
       } catch (error) {
         console.error("Session check failed:", error);
-        setIsLoggedIn(false);
       }
     };
 
     checkSession();
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", { event, session });
+      console.log("Auth state changed:", event, !!session);
       
       if (event === "SIGNED_IN" && session) {
-        console.log("User signed in:", session.user);
         setIsLoggedIn(true);
         toast({
           title: "Signed in successfully",
           description: "Welcome back!",
         });
       } else if (event === "SIGNED_OUT") {
-        console.log("User signed out");
         setIsLoggedIn(false);
-        navigate('/login');
       } else if (event === "TOKEN_REFRESHED") {
         console.log("Token refreshed successfully");
-        setIsLoggedIn(true);
       } else if (event === "USER_UPDATED") {
         console.log("User data updated");
-        setIsLoggedIn(true);
       }
     });
 
     return () => {
-      console.log("Cleaning up auth subscription");
       subscription.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, [toast]);
 
   const handleNavigation = (path: string) => {
     setOpen(false);
@@ -70,7 +59,6 @@ export function NavigationMenu() {
 
   const handleLogout = async () => {
     try {
-      console.log("Attempting logout...");
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Logout error:", error);
@@ -82,7 +70,6 @@ export function NavigationMenu() {
         return;
       }
       
-      console.log("Logout successful");
       setIsLoggedIn(false);
       toast({
         title: "Logged out successfully",
@@ -191,4 +178,4 @@ export function NavigationMenu() {
       </div>
     </nav>
   );
-};
+}
