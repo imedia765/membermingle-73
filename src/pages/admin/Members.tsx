@@ -19,7 +19,7 @@ export default function Members() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data, isLoading, isFetching, error } = useMembers(page, searchTerm);
+  const { data, isLoading, error } = useMembers(page, searchTerm);
 
   const handleUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['members'] });
@@ -33,14 +33,11 @@ export default function Members() {
 
   if (error) {
     console.error('Members component error:', error);
-    // Only show toast if it's not already being shown
-    if (!isLoading) {
-      toast({
-        title: "Error loading members",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Error loading members",
+      description: error.message,
+      variant: "destructive"
+    });
     return (
       <div className="space-y-6">
         <MembersHeader />
@@ -57,7 +54,7 @@ export default function Members() {
       <MembersSearch 
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm} 
-        isLoading={isFetching}
+        isLoading={isLoading}
       />
       
       {data?.members && (

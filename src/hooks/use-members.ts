@@ -31,31 +31,26 @@ export const useMembers = (page: number, searchTerm: string) => {
 
         console.log('Current user:', user.id);
         
-        // Try to get existing profile
-        const { data: profiles, error: profileError } = await supabase
+        // Create profile if it doesn't exist
+        const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('id', user.id);
+          .select('id, email, role')
+          .eq('id', user.id)
+          .single();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          throw profileError;
-        }
-
-        // If no profile exists, create one
-        if (!profiles || profiles.length === 0) {
+        if (profileError && !existingProfile) {
           console.log('Creating new profile for user');
-          const { error: createError } = await supabase
+          const { error: insertError } = await supabase
             .from('profiles')
-            .insert([{
+            .insert({
               id: user.id,
               email: user.email,
               role: 'admin' // Default role for testing
-            }]);
+            });
 
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            throw createError;
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            throw insertError;
           }
         }
 
@@ -100,7 +95,6 @@ export const useMembers = (page: number, searchTerm: string) => {
     meta: {
       errorMessage: "Failed to load members"
     },
-    retry: 1,
     staleTime: 30000, // Cache data for 30 seconds
     refetchOnWindowFocus: false // Prevent unnecessary refetches
   });
