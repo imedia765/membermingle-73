@@ -6,10 +6,12 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState, useEffect } from "react";
 import { supabase } from "../integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
+import { Badge } from "./ui/badge";
 
 export function NavigationMenu() {
   const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -25,6 +27,22 @@ export function NavigationMenu() {
         }
         console.log("Initial session check:", { session });
         setIsLoggedIn(!!session);
+
+        // Fetch user role if logged in
+        if (session?.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error("Error fetching user role:", profileError);
+          } else {
+            console.log("User role:", profile?.role);
+            setUserRole(profile?.role || 'member');
+          }
+        }
       } catch (error) {
         console.error("Session check failed:", error);
         setIsLoggedIn(false);
@@ -40,6 +58,21 @@ export function NavigationMenu() {
       if (event === "SIGNED_IN" && session) {
         console.log("User signed in:", session.user);
         setIsLoggedIn(true);
+
+        // Fetch user role on sign in
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching user role:", profileError);
+        } else {
+          console.log("User role on sign in:", profile?.role);
+          setUserRole(profile?.role || 'member');
+        }
+
         toast({
           title: "Signed in successfully",
           description: "Welcome back!",
@@ -47,6 +80,7 @@ export function NavigationMenu() {
       } else if (event === "SIGNED_OUT") {
         console.log("User signed out");
         setIsLoggedIn(false);
+        setUserRole(null);
         navigate('/login');
       } else if (event === "TOKEN_REFRESHED") {
         console.log("Token refreshed successfully");
@@ -84,6 +118,7 @@ export function NavigationMenu() {
       
       console.log("Logout successful");
       setIsLoggedIn(false);
+      setUserRole(null);
       toast({
         title: "Logged out successfully",
         description: "Come back soon!",
@@ -99,14 +134,32 @@ export function NavigationMenu() {
     }
   };
 
+  const getRoleBadgeVariant = (role: string | null) => {
+    switch (role) {
+      case 'admin':
+        return 'destructive';
+      case 'collector':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  };
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-14 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            PWA Burton
-          </span>
-        </Link>
+        <div className="flex items-center space-x-4">
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              PWA Burton
+            </span>
+          </Link>
+          {isLoggedIn && userRole && (
+            <Badge variant={getRoleBadgeVariant(userRole)} className="capitalize">
+              {userRole}
+            </Badge>
+          )}
+        </div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
@@ -191,4 +244,4 @@ export function NavigationMenu() {
       </div>
     </nav>
   );
-};
+}
