@@ -30,22 +30,30 @@ export const useMembers = (page: number, searchTerm: string) => {
         }
 
         console.log('Current user:', user.id);
-        
-        // Create profile if it doesn't exist
+
+        // Check if profile exists
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id, email, role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError && !existingProfile) {
+        if (profileError) {
+          console.error('Error checking profile:', profileError);
+          throw profileError;
+        }
+
+        // If no profile exists, create one
+        if (!existingProfile) {
           console.log('Creating new profile for user');
           const { error: insertError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: user.id,
               email: user.email,
-              role: 'admin' // Default role for testing
+              role: 'admin', // Default role for testing
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             });
 
           if (insertError) {

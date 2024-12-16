@@ -33,11 +33,6 @@ export default function Members() {
 
   if (error) {
     console.error('Members component error:', error);
-    toast({
-      title: "Error loading members",
-      description: error.message,
-      variant: "destructive"
-    });
     return (
       <div className="space-y-6">
         <MembersHeader />
