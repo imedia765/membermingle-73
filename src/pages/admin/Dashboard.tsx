@@ -31,19 +31,19 @@ export default function Dashboard() {
   const [activeCollectors, setActiveCollectors] = useState(0);
   const [pendingRegistrations, setPendingRegistrations] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
-    const [membershipTypeData, setMembershipTypeData] = useState([]);
-    const [membershipData, setMembershipData] = useState([]);
-
+  const [membershipTypeData, setMembershipTypeData] = useState([]);
+  const [membershipData, setMembershipData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch total members
-        const { data: membersData, error: membersError } = await supabase
+        // Fetch total members using count
+        const { count: membersCount, error: membersError } = await supabase
           .from("members")
-          .select("*", { count: 'exact' });
+          .select('*', { count: 'exact', head: true });
+        
         if (membersError) throw membersError;
-        setTotalMembers(membersData.length);
+        setTotalMembers(membersCount || 0);
 
         // Fetch active collectors
         const { data: collectorsData, error: collectorsError } = await supabase
@@ -140,7 +140,7 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 
   return (

@@ -87,6 +87,30 @@ export type Database = {
         }
         Relationships: []
       }
+      database_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          performed_by?: string | null
+        }
+        Relationships: []
+      }
       family_members: {
         Row: {
           created_at: string
@@ -131,9 +155,12 @@ export type Database = {
       members: {
         Row: {
           address: string | null
+          collector: string | null
           collector_id: string | null
+          cors_enabled: boolean | null
           created_at: string
           date_of_birth: string | null
+          default_password_hash: string | null
           email: string | null
           full_name: string
           gender: string | null
@@ -141,6 +168,7 @@ export type Database = {
           marital_status: string | null
           member_number: string
           membership_type: string | null
+          password_changed: boolean | null
           phone: string | null
           postcode: string | null
           status: string | null
@@ -150,9 +178,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          collector?: string | null
           collector_id?: string | null
+          cors_enabled?: boolean | null
           created_at?: string
           date_of_birth?: string | null
+          default_password_hash?: string | null
           email?: string | null
           full_name: string
           gender?: string | null
@@ -160,6 +191,7 @@ export type Database = {
           marital_status?: string | null
           member_number: string
           membership_type?: string | null
+          password_changed?: boolean | null
           phone?: string | null
           postcode?: string | null
           status?: string | null
@@ -169,9 +201,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          collector?: string | null
           collector_id?: string | null
+          cors_enabled?: boolean | null
           created_at?: string
           date_of_birth?: string | null
+          default_password_hash?: string | null
           email?: string | null
           full_name?: string
           gender?: string | null
@@ -179,6 +214,7 @@ export type Database = {
           marital_status?: string | null
           member_number?: string
           membership_type?: string | null
+          password_changed?: boolean | null
           phone?: string | null
           postcode?: string | null
           status?: string | null
@@ -255,6 +291,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string
           user_id: string | null
         }
@@ -262,6 +299,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -269,6 +307,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
           user_id?: string | null
         }
@@ -394,10 +433,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      merge_duplicate_collectors: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          merged_count: number
+          details: string
+        }[]
+      }
+      normalize_collector_name: {
+        Args: {
+          name: string
+        }
+        Returns: string
+      }
+      sync_collector_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "member" | "collector" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -1,231 +1,170 @@
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  ChevronDown, 
-  MessageSquare, 
-  TrashIcon,
-  Eye,
-  Users,
-  Pencil,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Edit2, MoreVertical, UserCheck, UserX, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Member } from "./types";
 
 interface MemberCardProps {
-  member: {
-    id: string;
-    full_name: string;
-    member_number: string;
-    status: string;
-    created_at: string;
-    email: string;
-    phone: string;
-    address: string;
-  };
+  member: Member;
   expandedMember: string | null;
   editingNotes: string | null;
   toggleMember: (id: string) => void;
   setEditingNotes: (id: string | null) => void;
+  onUpdate?: () => void;
 }
 
-export const MemberCard = ({ 
-  member, 
-  expandedMember, 
-  editingNotes, 
-  toggleMember, 
-  setEditingNotes 
-}: MemberCardProps) => {
-  // Fetch family members
-  const { data: familyMembers } = useQuery({
-    queryKey: ['familyMembers', member.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('member_id', member.id);
-      
+export function MemberCard({
+  member,
+  expandedMember,
+  editingNotes,
+  toggleMember,
+  setEditingNotes,
+  onUpdate
+}: MemberCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleToggle = () => {
+    toggleMember(member.id);
+    setIsExpanded(!isExpanded);
+  };
+
+  const handleStatusChange = async (newStatus: 'active' | 'suspended' | 'deceased') => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('members')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', member.id);
+
       if (error) throw error;
-      return data;
-    },
-    enabled: !!member.id
-  });
 
-  // Fetch payments
-  const { data: payments } = useQuery({
-    queryKey: ['payments', member.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('member_id', member.id)
-        .order('payment_date', { ascending: false })
-        .limit(5);
+      toast({
+        title: "Status Updated",
+        description: `Member status has been updated to ${newStatus}`,
+      });
       
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error updating member status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update member status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to permanently remove this member? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', member.id);
+
       if (error) throw error;
-      return data;
-    },
-    enabled: !!member.id
-  });
 
-  // Fetch admin notes
-  const { data: adminNotes } = useQuery({
-    queryKey: ['adminNotes', member.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_notes')
-        .select('*')
-        .eq('member_id', member.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      toast({
+        title: "Member Removed",
+        description: "The member has been permanently removed",
+      });
       
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!member.id
-  });
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove member",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const spouses = familyMembers?.filter(fm => fm.relationship === 'spouse') || [];
-  const dependants = familyMembers?.filter(fm => fm.relationship !== 'spouse') || [];
+  const statusColor = member.status === 'active' ? 'text-green-500' : 
+                     member.status === 'suspended' ? 'text-yellow-500' : 
+                     member.status === 'deceased' ? 'text-gray-500' : 'text-red-500';
 
   return (
-    <Card key={member.id} className="overflow-hidden">
-      <div className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleMember(member.id)}
-              className="mt-1"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold">
-                {member.member_number} - {member.full_name}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Status: {member.status} | Joined: {new Date(member.created_at).toLocaleDateString()}
-              </p>
-            </div>
+    <Card className="p-4 bg-card">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{member.full_name}</h3>
+          <div className="flex gap-2 text-sm text-gray-400">
+            <span>Member ID: {member.member_number}</span>
+            <span>•</span>
+            <span className={statusColor}>
+              {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Unknown'}
+            </span>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span>Family Members</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Covered Members</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {spouses.length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-sm font-semibold">Spouse</div>
-                    {spouses.map((spouse, index) => (
-                      <div key={index} className="px-2 py-1.5 text-sm">
-                        {spouse.name}
-                        <div className="text-xs text-muted-foreground">
-                          Born: {new Date(spouse.date_of_birth).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {dependants.length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-sm font-semibold">Dependants</div>
-                    {dependants.map((dependant, index) => (
-                      <div key={index} className="px-2 py-1.5 text-sm">
-                        {dependant.name}
-                        <div className="text-xs text-muted-foreground">
-                          {dependant.relationship} | Born: {new Date(dependant.date_of_birth).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {(!spouses.length && !dependants.length) && (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No family members registered
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
-              <Pencil className="h-4 w-4 mr-2" />
-              <span>Edit</span>
-            </Button>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
-              <Eye className="h-4 w-4 mr-2" />
-              <span>View</span>
-            </Button>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto text-destructive">
-              <TrashIcon className="h-4 w-4 mr-2" />
-              <span>Delete</span>
-            </Button>
-          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleToggle}>
+            {expandedMember === member.id ? "Less Info" : "More Info"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" disabled={isLoading}>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingNotes(member.id)} className="cursor-pointer">
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit Details
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {member.status !== 'active' && (
+                <DropdownMenuItem onClick={() => handleStatusChange('active')} className="cursor-pointer">
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Activate Member
+                </DropdownMenuItem>
+              )}
+              {member.status === 'active' && (
+                <DropdownMenuItem onClick={() => handleStatusChange('suspended')} className="cursor-pointer text-yellow-600">
+                  <UserX className="mr-2 h-4 w-4" />
+                  Suspend Member
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleStatusChange('deceased')} className="cursor-pointer text-gray-600">
+                <UserX className="mr-2 h-4 w-4" />
+                Mark as Deceased
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Permanently
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {expandedMember === member.id && (
-        <CardContent className="border-t">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-semibold mb-2">Contact Information</h4>
-              <p className="text-sm">Email: {member.email}</p>
-              <p className="text-sm">Phone: {member.phone}</p>
-              <p className="text-sm">Address: {member.address}</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Payment History</h4>
-              <div className="space-y-2">
-                {payments?.map((payment, index) => (
-                  <div key={index} className="text-sm flex justify-between">
-                    <span>{new Date(payment.payment_date).toLocaleDateString()}</span>
-                    <span>£{payment.amount}</span>
-                    <span className="text-green-500">{payment.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold">Admin Notes</h4>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setEditingNotes(editingNotes === member.id ? null : member.id)}
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                {editingNotes === member.id ? "Save Notes" : "Edit Notes"}
-              </Button>
-            </div>
-            {editingNotes === member.id ? (
-              <Textarea 
-                defaultValue={adminNotes?.note || ''}
-                className="min-h-[100px]"
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">{adminNotes?.note || 'No admin notes'}</p>
-            )}
-          </div>
-        </CardContent>
+        <div className="mt-4 space-y-2 text-gray-300">
+          <p>Email: {member.email || "N/A"}</p>
+          <p>Phone: {member.phone || "N/A"}</p>
+          <p>Address: {member.address || "N/A"}</p>
+          <p>Membership Type: {member.membership_type || "Standard"}</p>
+          <p>Verified: {member.verified ? "Yes" : "No"}</p>
+          <p>Collector: {member.collector || "N/A"}</p>
+        </div>
       )}
     </Card>
   );
-};
+}
