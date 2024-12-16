@@ -34,11 +34,11 @@ export const useMembers = (page: number, searchTerm: string) => {
         // Check if profile exists
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, email, role')
+          .select('*')
           .eq('id', user.id)
-          .maybeSingle();
+          .single();
 
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
           console.error('Error checking profile:', profileError);
           throw profileError;
         }
@@ -48,7 +48,7 @@ export const useMembers = (page: number, searchTerm: string) => {
           console.log('Creating new profile for user');
           const { error: insertError } = await supabase
             .from('profiles')
-            .upsert({
+            .insert({
               id: user.id,
               email: user.email,
               role: 'admin', // Default role for testing
@@ -103,6 +103,7 @@ export const useMembers = (page: number, searchTerm: string) => {
     meta: {
       errorMessage: "Failed to load members"
     },
+    retry: 1,
     staleTime: 30000, // Cache data for 30 seconds
     refetchOnWindowFocus: false // Prevent unnecessary refetches
   });
