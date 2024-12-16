@@ -8,6 +8,7 @@ import { useAuthStateHandler } from "@/components/auth/AuthStateHandler";
 import { useLoginHandlers } from "@/components/auth/LoginHandlers";
 import { getMemberByMemberId, verifyMemberPassword } from "@/utils/memberAuth";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

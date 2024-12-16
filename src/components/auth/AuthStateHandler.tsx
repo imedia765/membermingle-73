@@ -44,7 +44,7 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
               title: "Signed in successfully",
               description: "Welcome back!",
             });
-            handleSuccessfulLogin(session);
+            handleSuccessfulLogin(session, navigate);
           }
           break;
           
@@ -70,7 +70,7 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
   }, [navigate, setIsLoggedIn, toast]);
 };
 
-const handleSuccessfulLogin = async (session: any) => {
+const handleSuccessfulLogin = async (session: any, navigate: (path: string) => void) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) return;
