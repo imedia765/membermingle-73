@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MemberCard } from "@/components/members/MemberCard";
 import { MembersHeader } from "@/components/members/MembersHeader";
@@ -21,22 +21,34 @@ export default function Members() {
 
   const { data, isLoading, isFetching, error } = useMembers(page, searchTerm);
 
-  const handleUpdate = () => {
+  const handleUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['members'] });
-  };
+  }, [queryClient]);
 
-  const toggleMember = (id: string) => {
-    setExpandedMember(expandedMember === id ? null : id);
-  };
+  const toggleMember = useCallback((id: string) => {
+    setExpandedMember(prev => prev === id ? null : id);
+  }, []);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / ITEMS_PER_PAGE);
 
   if (error) {
-    toast({
-      title: "Error loading members",
-      description: error.message,
-      variant: "destructive"
-    });
+    console.error('Members component error:', error);
+    // Only show toast if it's not already being shown
+    if (!isLoading) {
+      toast({
+        title: "Error loading members",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+    return (
+      <div className="space-y-6">
+        <MembersHeader />
+        <div className="text-center text-red-500 py-4">
+          Failed to load members. Please try again later.
+        </div>
+      </div>
+    );
   }
 
   return (
