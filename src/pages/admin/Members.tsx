@@ -27,11 +27,17 @@ export default function Members() {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('Current user:', user?.id);
       
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user?.id)
+        .eq('user_id', user?.id)
         .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw profileError;
+      }
+
       console.log('User role:', userProfile?.role);
 
       let query = supabase
