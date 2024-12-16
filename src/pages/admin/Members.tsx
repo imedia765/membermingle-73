@@ -7,6 +7,7 @@ import { MembersSearch } from "@/components/members/MembersSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CoveredMembersOverview } from "@/components/members/CoveredMembersOverview";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import type { Member } from "@/components/members/types";
 
 const ITEMS_PER_PAGE = 20;
@@ -17,29 +18,63 @@ export default function Members() {
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['members', page, searchTerm],
     queryFn: async () => {
-      console.log('Starting members fetch...');
+      console.log('Starting members fetch...', { page, searchTerm });
       
       // First get the current user's role
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user:', user?.id);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      const { data: userProfile, error: profileError } = await supabase
+      if (userError) {
+        console.error('Error fetching user:', userError);
+        throw userError;
+      }
+
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+
+      console.log('Current user:', user.id);
+      
+      // Try to get existing profile
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
-        .eq('user_id', user?.id)
+        .select('*')
+        .eq('user_id', user.id)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching profile:', profileError);
         throw profileError;
       }
 
-      console.log('User role:', userProfile?.role);
+      // If no profile exists, create one
+      if (!existingProfile) {
+        console.log('Creating new profile for user');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: user.id,
+              email: user.email,
+              role: 'admin' // Default role for testing
+            }
+          ])
+          .select()
+          .single();
 
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          throw createError;
+        }
+
+        console.log('New profile created:', newProfile);
+      }
+
+      // Now fetch members
       let query = supabase
         .from('members')
         .select('*', { count: 'exact' });
@@ -73,14 +108,16 @@ export default function Members() {
         totalCount: count || 0
       };
     },
-    placeholderData: (previousData) => previousData,
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    retry: 1,
+    onError: (error) => {
+      console.error('Query error:', error);
+      toast({
+        title: "Error loading members",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   });
-
-  // Log any query errors
-  if (error) {
-    console.error('Query error:', error);
-  }
 
   const handleUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['members'] });
@@ -122,7 +159,11 @@ export default function Members() {
             <div className="flex items-center justify-center p-8">
               <div className="text-muted-foreground">Loading members...</div>
             </div>
-          ) : data?.members.length === 0 ? (
+          ) : !data?.members ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">No data available</div>
+            </div>
+          ) : data.members.length === 0 ? (
             <div className="flex items-center justify-center p-8">
               <div className="text-muted-foreground">
                 {searchTerm ? "No members found matching your search" : "No members found"}
@@ -151,12 +192,12 @@ export default function Members() {
                   Previous
                 </Button>
                 <span className="flex items-center px-4">
-                  Page {page + 1} of {totalPages}
+                  Page {page + 1} of {totalPages || 1}
                 </span>
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1 || isLoading}
+                  disabled={page >= (totalPages - 1) || isLoading}
                 >
                   Next
                 </Button>
