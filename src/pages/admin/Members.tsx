@@ -18,10 +18,22 @@ export default function Members() {
   const [page, setPage] = useState(0);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['members', page, searchTerm],
     queryFn: async () => {
-      console.log('Fetching members...', { page, searchTerm });
+      console.log('Starting members fetch...');
+      
+      // First get the current user's role
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user?.id);
+      
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+      console.log('User role:', userProfile?.role);
+
       let query = supabase
         .from('members')
         .select('*', { count: 'exact' });
@@ -35,29 +47,34 @@ export default function Members() {
       const from = page * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
-      const { data, error, count } = await query
+      const { data: members, error: queryError, count } = await query
         .range(from, to)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching members:', error);
-        throw error;
+      if (queryError) {
+        console.error('Error fetching members:', queryError);
+        throw queryError;
       }
       
-      console.log('Total members count:', count);
-      console.log('Members data length:', data?.length);
+      console.log('Query completed. Members found:', members?.length);
+      console.log('Total count:', count);
       
       return {
-        members: data.map(member => ({
+        members: members?.map(member => ({
           ...member,
           name: member.full_name
-        })),
+        })) || [],
         totalCount: count || 0
       };
     },
     placeholderData: (previousData) => previousData,
     staleTime: 5000, // Consider data fresh for 5 seconds
   });
+
+  // Log any query errors
+  if (error) {
+    console.error('Query error:', error);
+  }
 
   const handleUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['members'] });
@@ -77,6 +94,12 @@ export default function Members() {
         setSearchTerm={setSearchTerm} 
         isLoading={isFetching}
       />
+      
+      {error ? (
+        <div className="text-red-500 p-4 text-center">
+          Error loading members: {error.message}
+        </div>
+      ) : null}
       
       {data?.members && (
         <>
