@@ -11,12 +11,18 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleEmailSubmit = async (data: { email: string; password: string }) => {
+  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
+        email,
+        password,
       });
 
       if (error) throw error;
@@ -34,13 +40,18 @@ export default function Login() {
     }
   };
 
-  const handleMemberIdSubmit = async (data: { memberId: string; password: string }) => {
+  const handleMemberIdSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     console.log("Member ID login attempt started");
     setIsLoading(true);
     
+    const formData = new FormData(e.currentTarget);
+    const memberId = formData.get('memberId') as string;
+    const password = formData.get('memberPassword') as string;
+    
     try {
-      console.log("Looking up member with ID:", data.memberId);
-      const member = await getMemberByMemberId(data.memberId);
+      console.log("Looking up member with ID:", memberId);
+      const member = await getMemberByMemberId(memberId);
 
       if (!member || !member.email) {
         console.log("Member lookup result:", member);
@@ -50,7 +61,7 @@ export default function Login() {
       // For development, we'll use the member number as the password
       const { error } = await supabase.auth.signInWithPassword({
         email: member.email,
-        password: data.password,
+        password,
       });
 
       if (error) throw error;
