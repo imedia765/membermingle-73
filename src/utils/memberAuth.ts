@@ -9,11 +9,16 @@ export async function getMemberByMemberId(memberId: string) {
       .from('members')
       .select('*')
       .eq('member_number', memberId.toUpperCase().trim())
-      .single();
+      .maybeSingle(); // Changed from single() to maybeSingle()
 
     if (error) {
       console.error("Database error when looking up member:", error);
       throw error;
+    }
+
+    if (!data) {
+      console.log("No member found with member number:", memberId);
+      return null;
     }
 
     console.log("Member lookup result:", data);
