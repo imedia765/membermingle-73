@@ -4,16 +4,15 @@ export async function getMemberByMemberId(memberId: string) {
   console.log("Looking up member with member_number:", memberId);
   
   try {
-    // Get member by exact member number match
     const { data, error } = await supabase
       .from('members')
       .select('*')
       .eq('member_number', memberId.toUpperCase().trim())
-      .maybeSingle(); // Changed from single() to maybeSingle()
+      .maybeSingle();
 
     if (error) {
       console.error("Database error when looking up member:", error);
-      throw error;
+      return null;
     }
 
     if (!data) {
