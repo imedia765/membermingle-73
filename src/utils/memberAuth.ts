@@ -15,11 +15,6 @@ export async function getMemberByMemberId(memberId: string) {
       return null;
     }
 
-    if (!data) {
-      console.log("No member found with member number:", memberId);
-      return null;
-    }
-
     console.log("Member lookup result:", data);
     return data;
   } catch (error) {
