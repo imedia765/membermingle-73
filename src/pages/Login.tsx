@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
@@ -14,6 +14,7 @@ export default function Login() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Set up auth state handling
   useAuthStateHandler(setIsLoggedIn);
@@ -33,18 +34,19 @@ export default function Login() {
 
       console.log("Looking up member with ID:", memberId);
       const member = await getMemberByMemberId(memberId);
-      console.log("Member lookup result:", { member });
-
+      
       if (!member || !member.email) {
-        throw new Error("Member ID not found");
+        throw new Error("Member ID not found or no email associated");
       }
 
+      console.log("Verifying password for member:", member.member_number);
       const isPasswordValid = await verifyMemberPassword(password, member.default_password_hash);
+      
       if (!isPasswordValid) {
         throw new Error("Invalid password");
       }
 
-      console.log("Attempting login with member's email");
+      console.log("Attempting login with member's email:", member.email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: member.email,
         password,
@@ -56,6 +58,8 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back!",
       });
+      
+      navigate("/admin");
     } catch (error) {
       console.error("Member ID login error:", error);
       toast({
