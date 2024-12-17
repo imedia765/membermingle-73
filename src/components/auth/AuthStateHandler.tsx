@@ -77,21 +77,36 @@ const handleSuccessfulLogin = async (session: any, navigate: (path: string) => v
 
     const { data: member, error } = await supabase
       .from('members')
-      .select('password_changed')
+      .select('password_changed, profile_updated, email_verified')
       .eq('email', user.email)
       .maybeSingle();
 
     if (error) {
-      console.error("Error checking password status:", error);
+      console.error("Error checking member status:", error);
       navigate("/admin");
       return;
     }
 
+    // Check if email is temporary
+    if (member && user.email.endsWith('@temp.pwaburton.org')) {
+      navigate("/profile");
+      return;
+    }
+
+    // Check if profile needs to be updated
+    if (member && !member.profile_updated) {
+      navigate("/profile");
+      return;
+    }
+
+    // Check if password needs to be changed
     if (member && !member.password_changed) {
       navigate("/change-password");
-    } else {
-      navigate("/admin");
+      return;
     }
+
+    // If all checks pass, redirect to admin dashboard
+    navigate("/admin");
   } catch (error) {
     console.error("Error in handleSuccessfulLogin:", error);
     navigate("/admin");

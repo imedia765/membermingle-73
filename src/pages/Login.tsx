@@ -26,8 +26,6 @@ export default function Login() {
       });
 
       if (error) throw error;
-
-      navigate("/admin/dashboard");
     } catch (error) {
       console.error("Email login error:", error);
       toast({
@@ -65,8 +63,6 @@ export default function Login() {
       });
 
       if (error) throw error;
-
-      navigate("/admin/dashboard");
     } catch (error) {
       console.error("Member ID login error:", error);
       toast({
