@@ -1,151 +1,32 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import { Menu, User, Users, Shield } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { useState, useEffect } from "react";
-import { supabase } from "../integrations/supabase/client";
-import { useToast } from "./ui/use-toast";
-import { Badge } from "./ui/badge";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function NavigationMenu() {
   const [open, setOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Session check error:", error);
-          return;
-        }
-        setIsLoggedIn(!!session);
-        
-        if (session) {
-          // Fetch user role from profiles table
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .single();
-            
-          if (!profileError && profileData) {
-            setUserRole(profileData.role);
-          }
-        }
-      } catch (error) {
-        console.error("Session check failed:", error);
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, !!session);
-      
-      if (event === "SIGNED_IN" && session) {
-        setIsLoggedIn(true);
-        // Fetch user role when signed in
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-          
-        if (profileData) {
-          setUserRole(profileData.role);
-        }
-        
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome back!",
-        });
-      } else if (event === "SIGNED_OUT") {
-        setIsLoggedIn(false);
-        setUserRole(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [toast]);
+  const { isLoggedIn, logout } = useAuth();
 
   const handleNavigation = (path: string) => {
     setOpen(false);
-    navigate(path);
-  };
-
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-        toast({
-          title: "Logout failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setIsLoggedIn(false);
-      setUserRole(null);
-      toast({
-        title: "Logged out successfully",
-        description: "Come back soon!",
-      });
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Logout failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getRoleBadge = () => {
-    if (!isLoggedIn || !userRole) return null;
-
-    const roleConfig = {
-      admin: { icon: Shield, color: "bg-red-500 hover:bg-red-600" },
-      collector: { icon: Users, color: "bg-blue-500 hover:bg-blue-600" },
-      member: { icon: User, color: "bg-green-500 hover:bg-green-600" }
-    }[userRole];
-
-    if (!roleConfig) return null;
-
-    const Icon = roleConfig.icon;
-    return (
-      <Badge className={`${roleConfig.color} ml-2 gap-1`}>
-        <Icon className="h-3 w-3" />
-        {userRole}
-      </Badge>
-    );
   };
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-14 items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              PWA Burton
-            </span>
-          </Link>
-          {getRoleBadge()}
-        </div>
+        <Link to="/" className="flex items-center space-x-2">
+          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            PWA Burton
+          </span>
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
           {isLoggedIn ? (
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={logout}>
               Logout
             </Button>
           ) : (
@@ -189,7 +70,7 @@ export function NavigationMenu() {
                   <Button
                     variant="outline"
                     className="justify-start bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    onClick={handleLogout}
+                    onClick={logout}
                   >
                     Logout
                   </Button>

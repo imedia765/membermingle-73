@@ -9,6 +9,8 @@ import {
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { supabase } from "../integrations/supabase/client";
+import { useToast } from "./ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/admin" },
@@ -23,35 +25,98 @@ const menuItems = [
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const { isLoggedIn, checkSession, logout } = useAuth();
+
+  const handleSessionError = async () => {
+    setLoading(false);
+    await logout();
+    navigate("/login");
+    toast({
+      title: "Session Error",
+      description: "Please sign in again",
+      variant: "destructive",
+    });
+  };
 
   useEffect(() => {
-    const checkSession = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
-      setLoading(false);
+    let isMounted = true;
+
+    const verifySession = async () => {
+      try {
+        console.log("Verifying admin session...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
+
+        if (!session) {
+          console.log("No session found, redirecting to login");
+          if (isMounted) {
+            await handleSessionError();
+          }
+          return;
+        }
+
+        // Verify the session is still valid
+        const isValid = await checkSession();
+        console.log("Session validation result:", isValid);
+        
+        if (!isValid && isMounted) {
+          console.log("Invalid session, logging out");
+          await handleSessionError();
+          return;
+        }
+
+        if (isMounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Session verification failed:", error);
+        if (isMounted) {
+          await handleSessionError();
+        }
+      }
     };
 
-    checkSession();
+    verifySession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsLoggedIn(!!session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      
+      console.log("Auth state changed in admin layout:", event, !!session);
+      
+      if (event === 'SIGNED_OUT' || !session) {
+        console.log('User signed out or session ended');
+        navigate("/login");
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed, verifying session');
+        await verifySession();
+      }
     });
 
     return () => {
+      console.log("Cleaning up admin layout auth subscription");
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
-
+  }, [navigate, toast, checkSession, logout]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isLoggedIn) {
-    navigate("/login");
     return null;
   }
 
