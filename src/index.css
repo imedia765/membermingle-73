@@ -73,22 +73,4 @@
   body {
     @apply bg-background text-foreground;
   }
-  h1 {
-    @apply text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-4;
-  }
-  h2 {
-    @apply text-2xl font-semibold text-foreground mb-3;
-  }
-  h3 {
-    @apply text-xl font-medium text-foreground mb-2;
-  }
-  p {
-    @apply text-muted-foreground leading-relaxed mb-4;
-  }
-  ul, ol {
-    @apply text-muted-foreground space-y-2 mb-4;
-  }
-  li {
-    @apply leading-relaxed;
-  }
 }

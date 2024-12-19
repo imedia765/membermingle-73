@@ -15,13 +15,15 @@ const CollectorResponsibilities = () => {
         </Link>
       </div>
 
-      <h1>PWA Collector Member Responsibilities</h1>
+      <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-8 animate-fade-in">
+        PWA Collector Member Responsibilities
+      </h1>
 
       <Card className="animate-fade-in">
         <CardHeader>
-          <CardTitle>Overview</CardTitle>
+          <CardTitle className="text-xl text-primary">Overview</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4 text-muted-foreground">
           <p>
             A Collector member is a senior member of the PWA who is responsible for
             a specific number of paying members who are part of the death
@@ -32,10 +34,12 @@ const CollectorResponsibilities = () => {
 
       <Card className="animate-fade-in">
         <CardHeader>
-          <CardTitle>Collector Responsibilities</CardTitle>
+          <CardTitle className="text-xl text-primary">
+            Collector Responsibilities
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="list-disc list-inside">
+          <ul className="space-y-3 text-muted-foreground list-disc list-inside">
             <li>Act as the representative of the death committee for each member on their list.</li>
             <li>Act as first point of contact for any enquiries from members or prospective members.</li>
             <li>Register new members with the death committee.</li>
@@ -43,7 +47,7 @@ const CollectorResponsibilities = () => {
             <li>Collect member's fees whenever a collection is due.</li>
             <li>
               Keep a record of all members' payments made into PWA bank account, including:
-              <ul className="list-disc list-inside ml-6 mt-2">
+              <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                 <li>Date paid</li>
                 <li>Reference used</li>
                 <li>Bank account name</li>
@@ -58,10 +62,14 @@ const CollectorResponsibilities = () => {
         </CardContent>
       </Card>
 
-      <p className="text-center">
+      <p className="text-center text-sm text-muted-foreground mt-8">
         As a Collector Member, you play a crucial role in the smooth operation and
         communication within the Pakistan Welfare Association.
       </p>
+
+      <footer className="text-center text-sm text-muted-foreground mt-12 pb-8">
+        © 2024 Pakistan Welfare Association. All rights reserved.
+      </footer>
     </div>
   );
 };
