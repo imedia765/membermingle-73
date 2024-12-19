@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CollectorActions } from "./CollectorActions";
+import { Badge } from "@/components/ui/badge";
 
 interface CollectorCardProps {
   collector: any;
@@ -23,8 +24,6 @@ export function CollectorCard({
 }: CollectorCardProps) {
   const isExpanded = expandedCollector === collector.id;
   const memberCount = collector.members?.length || 0;
-  const statusText = collector.active ? "Active" : "Inactive";
-  const statusColor = collector.active ? "text-green-500" : "text-red-500";
 
   return (
     <Card className="bg-card">
@@ -49,7 +48,9 @@ export function CollectorCard({
                 <h3 className="text-xl text-white truncate">
                   {collector.prefix}{collector.number} - {collector.name}
                 </h3>
-                <span className={`text-sm ${statusColor}`}>({statusText})</span>
+                <Badge variant={collector.active ? "success" : "destructive"}>
+                  {collector.active ? "Active" : "Inactive"}
+                </Badge>
               </div>
               <p className="text-sm text-gray-400">
                 Members: {memberCount}
