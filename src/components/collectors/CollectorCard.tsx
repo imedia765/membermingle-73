@@ -48,7 +48,7 @@ export function CollectorCard({
                 <h3 className="text-xl text-white truncate">
                   {collector.prefix}{collector.number} - {collector.name}
                 </h3>
-                <Badge variant={collector.active ? "success" : "destructive"}>
+                <Badge variant={collector.active ? "default" : "destructive"}>
                   {collector.active ? "Active" : "Inactive"}
                 </Badge>
               </div>
