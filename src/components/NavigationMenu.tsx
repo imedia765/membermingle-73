@@ -1,29 +1,17 @@
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import { Menu, UserCheck } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "./ui/badge";
 
 export function NavigationMenu() {
   const [open, setOpen] = useState(false);
-  const { isLoggedIn, logout, userRole } = useAuth();
+  const { isLoggedIn, logout } = useAuth();
 
   const handleNavigation = (path: string) => {
     setOpen(false);
-  };
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'destructive';
-      case 'collector':
-        return 'default';
-      default:
-        return 'secondary';
-    }
   };
 
   return (
@@ -37,12 +25,6 @@ export function NavigationMenu() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
-          {isLoggedIn && (
-            <Badge variant={getRoleBadgeVariant(userRole)} className="mr-2">
-              <UserCheck className="h-3 w-3 mr-1" />
-              {userRole}
-            </Badge>
-          )}
           {isLoggedIn ? (
             <Button variant="outline" size="sm" onClick={logout}>
               Logout
@@ -71,12 +53,6 @@ export function NavigationMenu() {
 
         {/* Mobile Navigation */}
         <div className="flex items-center space-x-2 md:hidden">
-          {isLoggedIn && (
-            <Badge variant={getRoleBadgeVariant(userRole)} className="mr-2">
-              <UserCheck className="h-3 w-3 mr-1" />
-              {userRole}
-            </Badge>
-          )}
           <ThemeToggle />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>

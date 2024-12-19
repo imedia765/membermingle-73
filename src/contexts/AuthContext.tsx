@@ -5,7 +5,6 @@ import { useToast } from "@/components/ui/use-toast";
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  userRole: string;  // Added this line
   logout: () => Promise<void>;
   checkSession: () => Promise<boolean>;
 }
@@ -14,7 +13,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState('member'); // Default role
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -25,17 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Session check failed:", error);
         setIsLoggedIn(false);
         return false;
-      }
-      
-      if (session) {
-        // Fetch user role from profiles table
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        setUserRole(profile?.role || 'member');
       }
       
       const isValid = !!session;
@@ -106,14 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       switch (event) {
         case "SIGNED_IN":
           if (session) {
-            // Fetch user role when signed in
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('user_id', session.user.id)
-              .single();
-            
-            setUserRole(profile?.role || 'member');
             setIsLoggedIn(true);
             toast({
               title: "Welcome back!",
@@ -125,14 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
         case "SIGNED_OUT":
           setIsLoggedIn(false);
-          setUserRole('member');
           navigate('/login');
           break;
           
         case "TOKEN_REFRESHED":
-          if (session) {
-            setIsLoggedIn(true);
-          }
+          console.log("Token refreshed");
+          if (session) setIsLoggedIn(true);
           break;
       }
     });
@@ -143,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [navigate, toast]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userRole, logout, checkSession }}>
+    <AuthContext.Provider value={{ isLoggedIn, logout, checkSession }}>
       {children}
     </AuthContext.Provider>
   );
