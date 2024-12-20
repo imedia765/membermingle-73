@@ -25,7 +25,11 @@ export const AdminLayout = () => {
           <h1 className="text-2xl font-bold">Admin Panel</h1>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button 
+                variant="default" 
+                size="icon"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle admin menu</span>
               </Button>
@@ -62,6 +66,13 @@ export const AdminLayout = () => {
                   onClick={() => handleNavigation("/admin/profile")}
                 >
                   Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
+                  onClick={() => handleNavigation("/admin/database")}
+                >
+                  Database
                 </Button>
               </div>
             </SheetContent>
