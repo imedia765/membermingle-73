@@ -53,17 +53,17 @@ export function NavigationMenu() {
           <ThemeToggle />
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Always show menu button */}
         <div className="flex items-center space-x-2 md:hidden">
           <ThemeToggle />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[80%] sm:w-[385px]" aria-label="Navigation Menu">
+            <SheetContent side="right" className="w-[80%] sm:w-[385px]">
               <div className="flex flex-col gap-4 p-6">
                 <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-4">
                   Navigation Menu
