@@ -1,4 +1,6 @@
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 
 export function ProcessFlowSection() {
   return (
@@ -10,25 +12,24 @@ export function ProcessFlowSection() {
         <p className="text-muted-foreground">
           View or download our comprehensive Medical Examiner Process Flow Chart:
         </p>
-        <object
-          data="/Flowchart-ME-Process-NBC-Final-1.pdf"
-          type="application/pdf"
-          width="100%"
-          height="500px"
-          className="mb-4"
-        >
-          <p>
-            Unable to display PDF file.{" "}
-            <a
-              href="/Flowchart-ME-Process-NBC-Final-1.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Download PDF
-            </a>
-          </p>
-        </object>
+        <div className="flex flex-col items-center gap-4">
+          <iframe
+            src="/Flowchart-ME-Process-NBC-Final-1.pdf"
+            className="w-full h-[500px] border border-border rounded-lg"
+            title="Medical Examiner Process Flow Chart"
+          >
+            <p>Your browser does not support iframes.</p>
+          </iframe>
+          
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => window.open('/Flowchart-ME-Process-NBC-Final-1.pdf', '_blank')}
+          >
+            <FileDown className="h-4 w-4" />
+            Download PDF
+          </Button>
+        </div>
       </div>
     </Card>
   );
