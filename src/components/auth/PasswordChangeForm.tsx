@@ -48,7 +48,7 @@ export const PasswordChangeForm = () => {
           .from('members')
           .select('*')
           .eq('email', user.email)
-          .maybeSingle();
+          .maybeSingle(); // Changed from .single() to .maybeSingle()
 
         if (memberError && memberError.code !== 'PGRST116') {
           console.error("Member data fetch error:", memberError);
@@ -62,11 +62,13 @@ export const PasswordChangeForm = () => {
             .from('members')
             .insert({
               email: user.email,
-              member_number: user.user_metadata.member_number || 'PENDING',
-              full_name: 'New Member',
+              member_number: 'PENDING',
+              full_name: user.user_metadata.full_name || 'New Member',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-              first_time_login: true
+              first_time_login: true,
+              status: 'active',
+              membership_type: 'standard'
             })
             .select()
             .single();
