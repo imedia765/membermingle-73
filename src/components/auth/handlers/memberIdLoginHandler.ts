@@ -1,162 +1,80 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_KEY } from "@/config/supabase";
-import type { ToastActionElement } from "@/components/ui/toast";
-
-type Toast = {
-  title?: string;
-  description?: React.ReactNode;
-  variant?: "default" | "destructive";
-  action?: ToastActionElement;
-  children?: React.ReactNode;
-};
+import { ToastType } from "@/hooks/use-toast";
 
 export const handleMemberIdLogin = async (
   memberId: string,
   password: string,
-  toast: (props: Toast) => void
+  { toast }: ToastType
 ) => {
   try {
     console.log("Attempting member ID login for:", memberId);
-    
-    // Step 1: Check if member exists in the members table
-    const { data: existingMember, error: checkError } = await supabase
+
+    // First get the member's email using member number
+    const { data: memberData, error: memberError } = await supabase
       .from('members')
-      .select('email, member_number')
+      .select('email, full_name')
       .eq('member_number', memberId)
-      .maybeSingle();
+      .single();
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error("Member lookup error:", checkError);
-      throw new Error("Error looking up member details");
+    if (memberError || !memberData?.email) {
+      console.error("Member lookup error:", memberError);
+      throw new Error("Member not found");
     }
 
-    let memberEmail;
-
-    // Step 2: Create member record if it doesn't exist
-    if (!existingMember) {
-      console.log("Member not found, attempting to create:", memberId);
-      
-      const tempEmail = `${memberId.toLowerCase()}@temp.pwaburton.org`;
-      
-      const { data: newMember, error: createError } = await supabase
-        .from('members')
-        .insert({
-          member_number: memberId,
-          full_name: memberId,
-          email: tempEmail,
-          verified: true,
-          profile_updated: false,
-          email_verified: true
-        })
-        .select('email')
-        .single();
-
-      if (createError) {
-        if (createError.code === '23505') {
-          // Handle race condition - fetch the member that was just created
-          const { data: racedMember, error: raceFetchError } = await supabase
-            .from('members')
-            .select('email')
-            .eq('member_number', memberId)
-            .single();
-
-          if (raceFetchError) {
-            console.error("Error fetching member after race condition:", raceFetchError);
-            throw new Error("Failed to retrieve member details");
-          }
-
-          memberEmail = racedMember.email;
-        } else {
-          console.error("Error creating member:", createError);
-          throw new Error("Failed to create member account");
-        }
-      } else {
-        memberEmail = newMember.email;
-      }
-    } else {
-      memberEmail = existingMember.email;
-    }
-
-    if (!memberEmail) {
-      throw new Error("Could not determine member email");
-    }
-
-    // Step 3: Handle auth signup/signin
-    console.log("Attempting auth flow for:", memberEmail);
-
-    // Try signup first (will fail if user exists, which is fine)
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: memberEmail,
+    // Sign in with email and password
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: memberData.email,
       password: password,
-      options: {
-        data: {
-          member_id: memberId,
-          member_number: memberId.toUpperCase(),
-        }
-      }
-    });
-
-    if (signUpError && !signUpError.message.includes("User already registered")) {
-      console.error("Signup error:", signUpError);
-      throw signUpError;
-    }
-
-    // Wait briefly for signup to process
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Step 4: Attempt sign in
-    console.log("Attempting sign in for:", memberEmail);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: memberEmail,
-      password,
     });
 
     if (signInError) {
       console.error("Sign in error:", signInError);
+      throw signInError;
+    }
+
+    if (!signInData.user) {
+      throw new Error("No user data returned after login");
+    }
+
+    console.log("User signed in successfully:", signInData.user.id);
+
+    // Check if profile exists
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', signInData.user.id)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error("Error checking profile:", profileError);
+      throw profileError;
+    }
+
+    // If no profile exists, create one
+    if (!existingProfile) {
+      console.log("Creating new profile for user:", signInData.user.id);
       
-      if (signInError.message === "Email not confirmed") {
-        // Handle unconfirmed email case
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/confirm-user-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          },
-          body: JSON.stringify({ email: memberEmail })
-        });
-
-        if (!response.ok) {
-          console.error("Email verification failed:", await response.text());
-          throw new Error("Unable to verify email. Please contact support.");
+      const { error: createError } = await supabase.rpc(
+        'create_profile',
+        {
+          p_id: signInData.user.id,
+          p_email: memberData.email,
+          p_user_id: signInData.user.id
         }
+      );
 
-        // Retry sign in after email confirmation
-        const { error: retryError } = await supabase.auth.signInWithPassword({
-          email: memberEmail,
-          password,
-        });
-
-        if (retryError) {
-          console.error("Retry sign in error:", retryError);
-          if (retryError.message.includes("Invalid login credentials")) {
-            throw new Error("Invalid Member ID or password. Please try again.");
-          }
-          throw retryError;
-        }
-      } else if (signInError.message.includes("Invalid login credentials")) {
-        throw new Error("Invalid Member ID or password. Please try again.");
-      } else {
-        throw signInError;
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        throw createError;
       }
     }
 
-    console.log("Login successful for member:", memberId);
     return true;
   } catch (error) {
-    console.error("Member ID login error:", error);
+    console.error("Login process error:", error);
     toast({
       title: "Login failed",
-      description: error instanceof Error ? error.message : "Invalid Member ID or password",
+      description: error instanceof Error ? error.message : "An error occurred during login",
       variant: "destructive",
     });
     return false;

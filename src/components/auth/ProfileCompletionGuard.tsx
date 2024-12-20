@@ -5,30 +5,99 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
+import { Profile } from "@/integrations/supabase/types/profile";
+import { Member } from "@/integrations/supabase/types/member";
 
 interface ProfileCompletionGuardProps {
   children: React.ReactNode;
 }
 
+type ProfileData = {
+  id: string;
+  email: string | null;
+  created_at: string;
+  updated_at: string;
+  profile_completed: boolean;
+};
+
 export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<ProfileData>({
     queryKey: ['profile-completion-check'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) throw new Error("No authenticated user");
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user?.email) throw new Error("No authenticated user");
 
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .eq('email', user.email)
-        .single();
+        // First check if profile exists
+        const { data: existingProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (error) throw error;
-      return data;
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+
+        // If no profile exists, create one
+        if (!existingProfile) {
+          console.log("Creating new profile for user:", user.id);
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              profile_completed: false
+            })
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          return {
+            id: newProfile.id,
+            email: newProfile.email,
+            created_at: newProfile.created_at,
+            updated_at: newProfile.updated_at,
+            profile_completed: false
+          } as ProfileData;
+        }
+
+        // Get member data to check profile completion
+        const { data: memberData, error: memberError } = await supabase
+          .from('members')
+          .select('*')
+          .eq('email', user.email)
+          .single();
+
+        if (memberError) {
+          // If member data doesn't exist, return profile with profile_completed = false
+          return {
+            id: existingProfile.id,
+            email: existingProfile.email,
+            created_at: existingProfile.created_at,
+            updated_at: existingProfile.updated_at,
+            profile_completed: false
+          } as ProfileData;
+        }
+        
+        return {
+          id: memberData.id,
+          email: memberData.email,
+          created_at: memberData.created_at,
+          updated_at: memberData.updated_at,
+          profile_completed: memberData.profile_completed ?? false
+        } as ProfileData;
+      } catch (error) {
+        console.error("Profile check error:", error);
+        throw error;
+      }
     },
+    retry: 1,
   });
 
   useEffect(() => {
