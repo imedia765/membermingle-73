@@ -5,8 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
-import { Profile } from "@/integrations/supabase/types/profile";
-import { Member } from "@/integrations/supabase/types/member";
 
 interface ProfileCompletionGuardProps {
   children: React.ReactNode;
@@ -24,32 +22,35 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: profile } = useQuery<ProfileData>({
+  const { data: profile } = useQuery({
     queryKey: ['profile-completion-check'],
     queryFn: async () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user?.email) throw new Error("No authenticated user");
 
-        // First check if profile exists
-        const { data: existingProfile, error: profileError } = await supabase
-          .from('profiles')
+        console.log("Checking profile completion for user:", user.email);
+
+        // Get member data to check profile completion
+        const { data: memberData, error: memberError } = await supabase
+          .from('members')
           .select('*')
-          .eq('id', user.id)
+          .eq('email', user.email)
           .maybeSingle();
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          throw profileError;
+        if (memberError) {
+          console.error("Error fetching member data:", memberError);
+          throw memberError;
         }
 
-        // If no profile exists, create one
-        if (!existingProfile) {
-          console.log("Creating new profile for user:", user.id);
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
+        if (!memberData) {
+          console.log("No member data found, creating new profile");
+          const { data: newMember, error: createError } = await supabase
+            .from('members')
             .insert({
-              id: user.id,
               email: user.email,
+              member_number: 'PENDING',
+              full_name: user.user_metadata.full_name || 'New Member',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               profile_completed: false
@@ -59,30 +60,48 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
 
           if (createError) throw createError;
           return {
-            id: newProfile.id,
-            email: newProfile.email,
-            created_at: newProfile.created_at,
-            updated_at: newProfile.updated_at,
+            id: newMember.id,
+            email: newMember.email,
+            created_at: newMember.created_at,
+            updated_at: newMember.updated_at,
             profile_completed: false
           } as ProfileData;
         }
 
-        // Get member data to check profile completion
-        const { data: memberData, error: memberError } = await supabase
-          .from('members')
-          .select('*')
-          .eq('email', user.email)
-          .single();
+        // Check if all required fields are filled
+        const requiredFields = [
+          'full_name',
+          'email',
+          'phone',
+          'address',
+          'town',
+          'postcode',
+          'date_of_birth',
+          'gender',
+          'marital_status'
+        ];
 
-        if (memberError) {
-          // If member data doesn't exist, return profile with profile_completed = false
-          return {
-            id: existingProfile.id,
-            email: existingProfile.email,
-            created_at: existingProfile.created_at,
-            updated_at: existingProfile.updated_at,
-            profile_completed: false
-          } as ProfileData;
+        const isProfileComplete = requiredFields.every(field => 
+          memberData[field] !== null && 
+          memberData[field] !== undefined && 
+          memberData[field] !== ''
+        );
+
+        console.log("Profile completion check:", {
+          isProfileComplete,
+          memberData
+        });
+
+        // If profile is complete but not marked as complete, update the flag
+        if (isProfileComplete && !memberData.profile_completed) {
+          const { error: updateError } = await supabase
+            .from('members')
+            .update({ profile_completed: true })
+            .eq('id', memberData.id);
+
+          if (updateError) {
+            console.error("Error updating profile completion status:", updateError);
+          }
         }
         
         return {
@@ -90,7 +109,7 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
           email: memberData.email,
           created_at: memberData.created_at,
           updated_at: memberData.updated_at,
-          profile_completed: memberData.profile_completed ?? false
+          profile_completed: isProfileComplete
         } as ProfileData;
       } catch (error) {
         console.error("Profile check error:", error);
