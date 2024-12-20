@@ -19,6 +19,7 @@ export const PasswordChangeForm = () => {
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
   const { checkSession } = useAuth();
@@ -43,12 +44,11 @@ export const PasswordChangeForm = () => {
 
         console.log("Found authenticated user:", user.email);
 
-        // First check if member exists
         const { data: memberData, error: memberError } = await supabase
           .from('members')
           .select('*')
           .eq('email', user.email)
-          .maybeSingle(); // Changed from .single() to .maybeSingle()
+          .maybeSingle();
 
         if (memberError && memberError.code !== 'PGRST116') {
           console.error("Member data fetch error:", memberError);
@@ -57,7 +57,6 @@ export const PasswordChangeForm = () => {
 
         if (!memberData) {
           console.log("No member found for email:", user.email);
-          // Create a new member record
           const { data: newMember, error: createError } = await supabase
             .from('members')
             .insert({
@@ -104,13 +103,40 @@ export const PasswordChangeForm = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFieldErrors({});
     setIsLoading(true);
     
     try {
       const formData = new FormData(e.currentTarget);
+      const errors: Record<string, string> = {};
       
-      // Validate form data
-      validateProfileForm(formData, newPassword, confirmPassword);
+      // Check required fields
+      const requiredFields = [
+        'fullName', 'email', 'phone', 'address', 'town', 
+        'postcode', 'dob', 'gender', 'maritalStatus'
+      ];
+
+      requiredFields.forEach(field => {
+        if (!formData.get(field)) {
+          errors[field] = 'This field is required';
+        }
+      });
+
+      // Validate email format
+      const email = formData.get('email') as string;
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errors['email'] = 'Please enter a valid email address';
+      }
+
+      // Validate password match if changing password
+      if (newPassword && newPassword !== confirmPassword) {
+        errors['password'] = "Passwords don't match";
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        throw new Error("Please fill in all required fields correctly");
+      }
       
       // Perform the update
       await updateProfileAndEmail(formData, newPassword, userData.email);
@@ -157,6 +183,7 @@ export const PasswordChangeForm = () => {
           userData={userData} 
           isLoading={isLoading} 
           isRequired={true}
+          errors={fieldErrors}
         />
         <PasswordFields
           newPassword={newPassword}
@@ -164,6 +191,7 @@ export const PasswordChangeForm = () => {
           setNewPassword={setNewPassword}
           setConfirmPassword={setConfirmPassword}
           isLoading={isLoading}
+          error={fieldErrors['password']}
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
