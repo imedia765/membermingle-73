@@ -17,57 +17,43 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
         
         if (error) {
           console.error("Session check error:", error);
-          handleAuthError(error);
+          // Clear any stale session data
+          await supabase.auth.signOut();
+          setIsLoggedIn(false);
           return;
         }
         
         if (session) {
           console.log("Active session found");
           setIsLoggedIn(true);
-          // Only navigate if we're not already on a valid route
-          if (window.location.pathname === '/') {
+          
+          // Check if user needs to complete profile
+          const { data: member } = await supabase
+            .from('members')
+            .select('first_time_login, profile_completed')
+            .eq('email', session.user.email)
+            .single();
+            
+          if (member?.first_time_login || !member?.profile_completed) {
+            console.log("Redirecting to profile for completion");
             navigate("/admin/profile");
+            toast({
+              title: "Welcome!",
+              description: "Please complete your profile information.",
+            });
           }
         } else {
-          console.log("No active session");
           setIsLoggedIn(false);
-          // Only navigate to login if we're not already there
-          if (!['/login', '/register'].includes(window.location.pathname)) {
-            navigate("/login");
-          }
         }
       } catch (error) {
         console.error("Session check failed:", error);
-        handleAuthError(error);
+        // Clear any stale session data on error
+        await supabase.auth.signOut();
+        setIsLoggedIn(false);
       }
     };
 
-    const handleAuthError = async (error: any) => {
-      console.error("Auth error occurred:", error);
-      
-      // Clear any stale auth data
-      await supabase.auth.signOut();
-      setIsLoggedIn(false);
-      
-      // Clear local storage auth data
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
-      // Only show toast if it's not a refresh token error
-      if (!error.message?.includes('refresh_token_not_found')) {
-        toast({
-          title: "Authentication Error",
-          description: "Please sign in again",
-          variant: "destructive",
-        });
-      }
-      
-      // Only navigate if we're not already on the login page
-      if (window.location.pathname !== '/login') {
-        navigate("/login");
-      }
-    };
-
+    // Initial session check
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -89,7 +75,7 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
         case "SIGNED_OUT":
           console.log("User signed out");
           setIsLoggedIn(false);
-          navigate("/login");
+          navigate("/");
           break;
           
         case "TOKEN_REFRESHED":
@@ -102,16 +88,10 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
         case "USER_UPDATED":
           console.log("User data updated");
           break;
-          
+
         case "INITIAL_SESSION":
-          if (!session) {
-            console.log("No initial session");
-            setIsLoggedIn(false);
-            // Only navigate if we're not already on a valid public route
-            if (!['/login', '/register', '/'].includes(window.location.pathname)) {
-              navigate("/login");
-            }
-          }
+          console.log("Initial session:", session);
+          setIsLoggedIn(!!session);
           break;
       }
     });
@@ -130,7 +110,7 @@ const handleSuccessfulLogin = async (session: any, navigate: (path: string) => v
 
     const { data: member, error } = await supabase
       .from('members')
-      .select('password_changed, profile_updated, email_verified')
+      .select('first_time_login, profile_completed, email_verified')
       .eq('email', user.email)
       .maybeSingle();
 
@@ -140,9 +120,14 @@ const handleSuccessfulLogin = async (session: any, navigate: (path: string) => v
       return;
     }
 
-    // Always redirect to profile page after login
+    // Check if profile needs to be completed
+    if (member && (member.first_time_login || !member.profile_completed)) {
+      navigate("/admin/profile");
+      return;
+    }
+
+    // If all checks pass, redirect to profile
     navigate("/admin/profile");
-    
   } catch (error) {
     console.error("Error in handleSuccessfulLogin:", error);
     navigate("/admin/profile");
