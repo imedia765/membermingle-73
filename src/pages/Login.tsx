@@ -1,120 +1,137 @@
 import { useState } from "react";
+import { LoginTabs } from "../components/auth/LoginTabs";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "../hooks/use-toast";
+import { getMemberByMemberId } from "../utils/memberAuth";
+import { supabase } from "../integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [memberId, setMemberId] = useState('');
-  const [password, setPassword] = useState('');
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    const cleanMemberId = memberId.toUpperCase().trim();
-    console.log("Login attempt with member ID:", cleanMemberId);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     try {
-      // First, get the member details
-      const { data: member, error: memberError } = await supabase
-        .from('members')
-        .select('id, email, password_changed, member_number, default_password_hash')
-        .eq('member_number', cleanMemberId)
-        .maybeSingle();
-
-      if (memberError) {
-        console.error("Member lookup error:", memberError);
-        throw new Error("Error checking member status");
-      }
-
-      if (!member) {
-        throw new Error("Invalid Member ID. Please check your credentials.");
-      }
-
-      const tempEmail = `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`;
-      console.log("Attempting login with temp email:", tempEmail);
-
-      let authResponse;
-
-      try {
-        // First attempt to sign in
-        authResponse = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: password,
-        });
-
-        if (authResponse.error) {
-          console.log("Sign in failed:", authResponse.error.message);
-          
-          // If login fails, try to sign up
-          if (authResponse.error.message.includes('Invalid login credentials')) {
-            console.log("Attempting signup for new user");
-            const signUpResponse = await supabase.auth.signUp({
-              email: tempEmail,
-              password: password,
-            });
-
-            if (signUpResponse.error && !signUpResponse.error.message.includes('User already registered')) {
-              throw signUpResponse.error;
-            }
-
-            // Try signing in again after signup
-            authResponse = await supabase.auth.signInWithPassword({
-              email: tempEmail,
-              password: password,
-            });
-          }
-        }
-      } catch (authError) {
-        console.error("Authentication error:", authError);
-        throw new Error("Authentication failed. Please try again.");
-      }
-
-      if (authResponse.error || !authResponse.data?.user) {
-        console.error("Final auth error:", authResponse.error);
-        throw new Error("Authentication failed. Please check your credentials and try again.");
-      }
-
-      console.log("Login successful:", authResponse.data);
-
-      // Update auth_user_id if not set
-      if (authResponse.data.user && member.id) {
-        const { error: updateError } = await supabase
-          .from('members')
-          .update({ 
-            auth_user_id: authResponse.data.user.id,
-            email_verified: true,
-            profile_updated: true
-          })
-          .eq('id', member.id);
-
-        if (updateError) {
-          console.error("Error updating member:", updateError);
-        }
-      }
-
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
+      console.log("Attempting email login with:", { email });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      
-      if (!member.password_changed) {
-        navigate("/change-password");
-      } else {
-        navigate("/admin/profile");
+
+      if (error) {
+        console.error("Email login error:", error);
+        throw error;
+      }
+
+      if (data?.user) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/admin");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Email login error:", error);
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials. Please check your Member ID and password.",
+        description: "Invalid email or password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMemberIdSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setShowEmailConfirmation(false);
+    
+    const formData = new FormData(e.currentTarget);
+    const memberId = formData.get('memberId') as string;
+    const password = formData.get('password') as string;
+    
+    try {
+      console.log("Looking up member with ID:", memberId);
+      const member = await getMemberByMemberId(memberId);
+      console.log("Member lookup result:", member);
+
+      if (!member) {
+        throw new Error("Member ID not found");
+      }
+
+      // Generate temporary email if needed
+      const tempEmail = `member.${member.member_number.toLowerCase()}@temporary.org`;
+      const email = member.email?.endsWith('@temp.pwaburton.org') 
+        ? tempEmail 
+        : member.email;
+
+      if (!email) {
+        throw new Error("No email associated with this member ID");
+      }
+
+      // First try to create the user account
+      console.log("Attempting to create user account:", { 
+        email,
+        memberId: member.member_number 
+      });
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            member_id: member.id,
+            member_number: member.member_number,
+            full_name: member.full_name
+          }
+        }
+      });
+
+      if (signUpError && !signUpError.message.includes("User already registered")) {
+        console.error("Sign up error:", signUpError);
+        throw signUpError;
+      }
+
+      // Now attempt to sign in
+      console.log("Attempting to sign in with credentials");
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        console.error("Sign in error:", signInError);
+        throw signInError;
+      }
+
+      if (signInData?.user) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/admin");
+      } else if (signUpData?.user) {
+        setShowEmailConfirmation(true);
+        throw new Error("Please check your email for confirmation link");
+      }
+
+    } catch (error) {
+      console.error("Member ID login error:", error);
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid member ID or password",
         variant: "destructive",
       });
     } finally {
@@ -128,45 +145,21 @@ export default function Login() {
         <CardHeader>
           <CardTitle className="text-2xl text-center">Login</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert className="bg-blue-50 border-blue-200">
-            <InfoIcon className="h-4 w-4 text-blue-500" />
-            <AlertDescription className="text-sm text-blue-700">
-              Enter your Member ID and password to login. If you haven't changed your password yet,
-              use your Member ID as both username and password.
-            </AlertDescription>
-          </Alert>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                id="memberId"
-                name="memberId"
-                type="text"
-                placeholder="Member ID (e.g. TM20001)"
-                value={memberId}
-                onChange={(e) => setMemberId(e.target.value.toUpperCase())}
-                required
-                disabled={isLoading}
-                className="uppercase"
-              />
-            </div>
-            <div className="space-y-2">
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
+        <CardContent>
+          {showEmailConfirmation && (
+            <Alert className="mb-6">
+              <InfoIcon className="h-4 w-4" />
+              <AlertDescription>
+                Please check your email for a confirmation link before logging in.
+                You may need to check your spam folder.
+              </AlertDescription>
+            </Alert>
+          )}
+          <LoginTabs 
+            onEmailSubmit={handleEmailSubmit}
+            onMemberIdSubmit={handleMemberIdSubmit}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
     </div>

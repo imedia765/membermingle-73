@@ -1,28 +1,37 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export const getMemberByMemberId = async (memberId: string) => {
-  console.log("Looking up member with ID:", memberId);
+export async function getMemberByMemberId(memberId: string) {
+  console.log("Looking up member with member_number:", memberId);
   
   try {
-    console.log("Looking up member with member_number:", memberId);
-    const { data: members, error } = await supabase
+    const { data, error } = await supabase
       .from('members')
       .select('*')
-      .eq('member_number', memberId)
-      .limit(1);
-    
-    console.log("Raw query response:", { members, error });
+      .eq('member_number', memberId.toUpperCase().trim())
+      .maybeSingle();
 
     if (error) {
+      console.error("Database error when looking up member:", error);
       throw error;
     }
 
-    const member = members?.[0] || null;
-    console.log("Final member lookup result:", member);
-    
-    return member;
+    console.log("Member lookup result:", data);
+    return data;
   } catch (error) {
-    console.error("Error looking up member:", error);
-    throw error;
+    console.error("Error in getMemberByMemberId:", error);
+    return null;
   }
-};
+}
+
+export async function verifyMemberPassword(memberId: string, password: string) {
+  const member = await getMemberByMemberId(memberId);
+  
+  if (!member) {
+    console.log("No member found for verification");
+    return false;
+  }
+
+  // For development, just check if password matches member number
+  // In production, this should use proper password hashing
+  return password === member.member_number;
+}

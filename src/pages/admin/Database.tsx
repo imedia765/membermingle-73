@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImportSection } from "@/components/database/ImportSection";
 import { BackupSection } from "@/components/database/BackupSection";
 import { DeleteDatabaseSection } from "@/components/database/DeleteDatabaseSection";
-import { CodebaseBackupSection } from "@/components/database/CodebaseBackupSection";
+import { UserManagementSection } from "@/components/database/UserManagementSection";
 import { getDatabaseStatus } from "@/utils/databaseBackup";
 
 interface DatabaseStatus {
@@ -80,7 +80,6 @@ export default function Database() {
       <div className="grid gap-4 md:grid-cols-2">
         <ImportSection />
         <BackupSection />
-        <CodebaseBackupSection />
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Database Status</CardTitle>
@@ -116,6 +115,9 @@ export default function Database() {
             </div>
           </CardContent>
         </Card>
+        <div className="md:col-span-2">
+          <UserManagementSection />
+        </div>
         <div className="md:col-span-2">
           <DeleteDatabaseSection onDelete={fetchStatus} />
         </div>
