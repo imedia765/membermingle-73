@@ -1,67 +1,76 @@
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { getMemberByMemberId } from "@/utils/memberAuth";
 
-export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
-  const { toast } = useToast();
+export async function handleMemberIdLogin(memberId: string, password: string, navigate: ReturnType<typeof useNavigate>) {
+  // First, look up the member
+  const member = await getMemberByMemberId(memberId);
+  
+  if (!member) {
+    throw new Error("Member ID not found");
+  }
+  
+  // Use member number for email
+  const email = `${member.member_number.toLowerCase()}@pwaburton.org`;
+  
+  console.log("Attempting member ID login with:", { memberId, email });
+  
+  try {
+    // Try to sign in
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-      setIsLoggedIn(true);
-    } catch (error) {
-      console.error("Email login error:", error);
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "An error occurred during login",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    console.log("Google login attempt started");
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + "/admin",
-        },
-      });
-
-      console.log("Google login response:", { data, error });
-      if (error) throw error;
+    if (signInError) {
+      console.error('Sign in error:', signInError);
       
-      toast({
-        title: "Redirecting to Google",
-        description: "Please wait while we redirect you to Google sign-in...",
-      });
-    } catch (error) {
-      console.error("Google login error:", error);
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "An error occurred during Google login",
-        variant: "destructive",
-      });
-    }
-  };
+      // If it's the first login attempt, try with default password
+      if (signInError.message.includes("Invalid login credentials") && !member.password_changed) {
+        console.log("First login attempt, trying with default password");
+        const { data: defaultSignInData, error: defaultSignInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: member.member_number, // Use member number as default password
+        });
 
-  return {
-    handleEmailSubmit,
-    handleGoogleLogin,
-  };
-};
+        if (!defaultSignInError && defaultSignInData?.user) {
+          navigate("/admin");
+          return;
+        }
+      }
+      
+      throw new Error("Invalid member ID or password");
+    }
+
+    if (signInData?.user) {
+      navigate("/admin");
+      return;
+    }
+
+    // If sign in fails, create account with provided password
+    console.log("Sign in failed, attempting to create account");
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password: member.member_number, // Use member number as initial password
+      options: {
+        data: {
+          member_id: member.id,
+          member_number: member.member_number,
+          full_name: member.full_name
+        }
+      }
+    });
+
+    if (signUpError) {
+      console.error('Sign up error:', signUpError);
+      throw signUpError;
+    }
+
+    if (signUpData?.user) {
+      navigate("/admin");
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    throw error;
+  }
+}

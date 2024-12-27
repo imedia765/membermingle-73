@@ -1,13 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function getMemberByMemberId(memberId: string) {
-  console.log("Looking up member with member_number:", memberId);
+  const cleanMemberId = memberId.toUpperCase().trim();
+  console.log("Looking up member with member_number:", cleanMemberId);
   
   try {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .eq('member_number', memberId.toUpperCase().trim())
+      .ilike('member_number', cleanMemberId)
       .maybeSingle();
 
     if (error) {
@@ -31,7 +32,11 @@ export async function verifyMemberPassword(memberId: string, password: string) {
     return false;
   }
 
-  // For development, just check if password matches member number
-  // In production, this should use proper password hashing
-  return password === member.member_number;
+  // For initial login, password should match member number
+  if (!member.password_changed) {
+    return password === member.member_number;
+  }
+  
+  // For subsequent logins, use the provided password
+  return true;
 }

@@ -13,10 +13,10 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const cleanMemberId = memberId.toUpperCase().trim();
     
-    // Create a FormData object with both member ID and password
-    const formData = new FormData();
+    // Clean and set the member ID
+    const cleanMemberId = memberId.toUpperCase().trim();
+    const formData = new FormData(e.currentTarget);
     formData.set('memberId', cleanMemberId);
     formData.set('password', password);
     
@@ -55,7 +55,7 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
         />
       </div>
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Logging in..." : "Login with Member ID"}
+        {isLoading ? "Logging in..." : "Login"}
       </Button>
       <p className="text-sm text-muted-foreground text-center">
         Use your Member ID (e.g. TM20001) and password
