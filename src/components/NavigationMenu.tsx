@@ -19,11 +19,13 @@ export function NavigationMenu() {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Session check error:", error);
+          setIsLoggedIn(false);
           return;
         }
         setIsLoggedIn(!!session);
       } catch (error) {
         console.error("Session check failed:", error);
+        setIsLoggedIn(false);
       }
     };
 
@@ -32,25 +34,37 @@ export function NavigationMenu() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, !!session);
       
-      if (event === "SIGNED_IN" && session) {
-        setIsLoggedIn(true);
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome back!",
-        });
-      } else if (event === "SIGNED_OUT") {
-        setIsLoggedIn(false);
-      } else if (event === "TOKEN_REFRESHED") {
-        console.log("Token refreshed successfully");
-      } else if (event === "USER_UPDATED") {
-        console.log("User data updated");
+      switch (event) {
+        case "SIGNED_IN":
+          if (session) {
+            setIsLoggedIn(true);
+            toast({
+              title: "Signed in successfully",
+              description: "Welcome back!",
+            });
+          }
+          break;
+        case "SIGNED_OUT":
+          setIsLoggedIn(false);
+          navigate("/login");
+          break;
+        case "TOKEN_REFRESHED":
+          console.log("Token refreshed successfully");
+          setIsLoggedIn(true);
+          break;
+        case "USER_UPDATED":
+          console.log("User data updated");
+          setIsLoggedIn(true);
+          break;
+        default:
+          console.log("Unhandled auth event:", event);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [toast, navigate]);
 
   const handleNavigation = (path: string) => {
     setOpen(false);
@@ -62,12 +76,7 @@ export function NavigationMenu() {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Logout error:", error);
-        toast({
-          title: "Logout failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
+        throw error;
       }
       
       setIsLoggedIn(false);
@@ -78,10 +87,12 @@ export function NavigationMenu() {
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
+      // Even if there's an error, we'll still clear the local state
+      setIsLoggedIn(false);
+      navigate("/login");
       toast({
-        title: "Logout failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
+        title: "Session ended",
+        description: "You have been logged out.",
       });
     }
   };
@@ -182,4 +193,4 @@ export function NavigationMenu() {
       </div>
     </nav>
   );
-}
+};
