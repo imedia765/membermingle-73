@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Member } from "@/components/members/types";
-import { useToast } from "@/hooks/use-toast";
 
 interface MembersData {
   members: Member[];
@@ -9,8 +8,6 @@ interface MembersData {
 }
 
 export const useMembers = (page: number, searchTerm: string) => {
-  const { toast } = useToast();
-
   return useQuery({
     queryKey: ['members', page, searchTerm],
     queryFn: async (): Promise<MembersData> => {
@@ -31,41 +28,62 @@ export const useMembers = (page: number, searchTerm: string) => {
 
         console.log('Current user:', user.id);
 
-        // Check if profile exists
-        const { data: existingProfile, error: profileError } = await supabase
+        // Get the user's profile to check their role
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, role, email')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Error checking profile:', profileError);
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
           throw profileError;
         }
 
-        // If no profile exists, create one
-        if (!existingProfile) {
-          console.log('Creating new profile for user');
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              role: 'admin', // Default role for testing
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            throw insertError;
-          }
+        if (!profile) {
+          throw new Error('No profile found for user');
         }
 
-        // Now fetch members
+        // Initialize query with collectors join
         let query = supabase
           .from('members')
-          .select('*', { count: 'exact' });
+          .select(`
+            *,
+            collectors (
+              id,
+              name,
+              prefix,
+              number
+            )
+          `, { count: 'exact' });
+
+        // If user is a collector, filter by their collector id
+        if (profile.role === 'collector') {
+          console.log('Filtering members for collector role');
+          
+          // Get collector details based on email
+          const { data: collector, error: collectorError } = await supabase
+            .from('collectors')
+            .select('id')
+            .eq('email', profile.email)
+            .maybeSingle();
+
+          if (collectorError) {
+            console.error('Error fetching collector:', collectorError);
+            throw collectorError;
+          }
+
+          if (!collector) {
+            console.log('No collector found for email:', profile.email);
+            return {
+              members: [],
+              totalCount: 0
+            };
+          }
+
+          console.log('Found collector:', collector);
+          query = query.eq('collector_id', collector.id);
+        }
 
         // Apply search filter if searchTerm exists
         if (searchTerm) {
@@ -76,35 +94,30 @@ export const useMembers = (page: number, searchTerm: string) => {
         const from = page * 20;
         const to = from + 19;
         
-        const { data: members, error: queryError, count } = await query
+        // Execute the query
+        const { data: members, error: membersError, count } = await query
           .range(from, to)
           .order('created_at', { ascending: false });
-        
-        if (queryError) {
-          console.error('Error fetching members:', queryError);
-          throw queryError;
+
+        if (membersError) {
+          console.error('Error fetching members:', membersError);
+          throw membersError;
         }
-        
-        console.log('Query completed. Members found:', members?.length);
-        console.log('Total count:', count);
-        
+
+        console.log(`Found ${count} total members, returning ${members?.length} for current page`);
+        console.log('Members data:', members);
+
         return {
-          members: members?.map(member => ({
-            ...member,
-            name: member.full_name
-          })) || [],
+          members: members || [],
           totalCount: count || 0
         };
       } catch (error) {
-        console.error('Error in useMembers:', error);
+        console.error('Error in useMembers hook:', error);
         throw error;
       }
     },
     meta: {
       errorMessage: "Failed to load members"
-    },
-    retry: 1,
-    staleTime: 30000, // Cache data for 30 seconds
-    refetchOnWindowFocus: false // Prevent unnecessary refetches
+    }
   });
 };
